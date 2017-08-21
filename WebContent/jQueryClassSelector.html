@@ -1,0 +1,45 @@
+<html>
+<head>
+    <title>OddEvenRowsColorChange</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script type="text/javascript">        
+		$(document).ready(function() {		
+// 		$('.small, .big').css('border', '5px solid red');
+// 		$('.small, span.big').css('border', '5px solid red');
+//  	$('#div2 .small').css('border', '5px solid red');
+ 		$('.small').filter('.big').css('border', '5px solid red');
+	
+		});
+	</script>
+</head>
+<body>
+
+<div class="small big">
+        DIV 1
+    </div>
+    <br />
+    <div class="small">
+        DIV 2
+        <br />
+        <div class='big'>
+        	DIV 3
+        </div>
+    </div>
+    <!-- 
+    <div id="div1" class="small">
+        DIV 1
+    </div>
+    <br />
+    <div id="div2">	
+        Div 2
+        <br />
+        <div class="small">
+            DIV 3
+        </div>
+        <br />
+        <span class="small">
+            SPAN
+        </span>
+    </div> -->
+</body>
+</html>

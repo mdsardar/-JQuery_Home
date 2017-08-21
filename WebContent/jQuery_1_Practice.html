@@ -1,0 +1,28 @@
+<html>
+<head>
+    <title></title>
+    <!-- <script src="/JQuery/JQueryScripts/jquery-3.2.1.js"></script> -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script type="text/javascript">
+        $().ready(function () {
+            $('#button1').css('background-color','blue')            
+            click(function () {
+                alert('jQuery Tuorial');
+            }); 
+        });
+        
+    </script>
+</head>
+<body>
+    <input id="button1" type="button" 	value="Click Me" /> <br>
+    <input id="button2" type="button" 	value="Click Me" /> 
+    <td >
+                    <input name="CM_name" id="CM_name${myIndex.index}" type="text"  value="${sList.cm_id}"  class= "Face" placeholder="Search "  onclick="searchMe(this.id)">
+                    <input type="hidden" name="CM_name1" value="test" />
+                </td>
+                <td >
+                    <input name="BOM_name" id="BOM_name${myIndex.index}" type="text"  value="" class= "Face" placeholder="Search" autocomplete="off" onclick="searchMe(this.id)">
+                    <input type="hidden" name="BOM_name1" value="test" />
+                </td> 
+</body>
+</html>
