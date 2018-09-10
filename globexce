@@ -1,0 +1,63 @@
+package com.citigroup.amlcdd.framework.util;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.servlet.ModelAndView;
+
+import com.citigroup.amlcdd.common.constants.AMLCDDConstants;
+import com.citigroup.amlcdd.framework.exception.AmlCddException;
+import com.citigroup.amlcdd.framework.service.AmlCddCacheUtil;
+
+@ControllerAdvice
+public class GlobalExceptionHandler {
+
+	private final Logger LOGGER = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+	@Autowired
+	AmlCddCacheUtil cddconfig;
+
+	private boolean isTraceEnabled = true;
+
+	public GlobalExceptionHandler() {
+		// isTraceEnabled =
+		// cddconfig.getAppConfig(AMLCDDConstants.TRACE_ENABLED).equalsIgnoreCase("Y")
+		// ? true : false;
+	}
+
+	@ExceptionHandler(Exception.class)
+	public ModelAndView allExceptionsHandler(Exception exception) {
+		return handleException(exception);
+	}
+
+	@ExceptionHandler(AmlCddException.class)
+	public ModelAndView amlCddExceptionsHandler(AmlCddException exception) {
+		return handleException(exception);
+	}
+
+	/**
+	 * Method which logs the exception details and sets the generic error
+	 * message.
+	 * 
+	 * @param exp
+	 * @return
+	 */
+	private ModelAndView handleException(Exception exp) {
+		LOGGER.error("Exception occured. Exception Details: " + exp.getMessage() + ":" + exp.getCause());
+
+		if (isTraceEnabled) {
+			StringBuilder builder = new StringBuilder();
+			StackTraceElement[] trace = exp.getStackTrace();
+			for (StackTraceElement traceElement : trace)
+				builder.append("\t " + traceElement + "\n");
+			LOGGER.debug(builder.toString());
+		}
+
+		ModelAndView mav = new ModelAndView();
+		mav.addObject("expMessage", "Unable to Process Please try again (or) later.");
+		mav.setViewName("error");
+		return mav;
+	}
+}
