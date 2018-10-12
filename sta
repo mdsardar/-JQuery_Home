@@ -1,0 +1,117 @@
+<html>
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>AML CDD</title>
+<%@taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
+<%@taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%>
+<%@taglib  uri="http://www.springframework.org/tags/form" prefix="form"%>
+<%@taglib prefix="sec" uri="http://www.springframework.org/security/tags"%>
+<meta name="GENERATOR" content="IBM WebSphere Studio">
+<meta http-equiv="Content-Style-Type" content="text/css">
+<script type="text/javascript" src=${pageContext.request.contextPath}/js/common/commonutil.js></script> 
+<link href=${pageContext.request.contextPath}/css/countryRiskOverride.css rel="stylesheet" type="text/css">
+<link rel="stylesheet" href="css/pagination.css" type="text/css" />
+</head>
+
+<%@ page language="java" contentType="text/html; charset=ISO-8859-1" pageEncoding="ISO-8859-1"%>	
+	<body leftmargin="0" topmargin="0" marginheight="0" marginwidth="0" bgcolor="#FFFFFF">
+	<div id="tabs" class="ui-tabs ui-corner-all ui-widget ui-widget-content">
+	<div id="statusDivMaker" class="successMsg" style="text-align: center;"></div>
+	<div id="errorStatus" class="failureMsg" style="text-align: center;"></div>
+	<table width="100%" border="0" cellspacing="0" cellpadding="4" class="table_title">
+	<tbody> <tr>
+	<td height="50%" width="70%">${SINGLE_TOUCH_APPROVAL.WORKFLOW_CONFIGURATION_RULES.label}</td>
+	</tr>
+	</tbody> </table>
+	<input type="hidden" id="pageNo" name="pageNo">
+	<input type="hidden" id="pageCount" name="pageCount" value="${pageCount}">
+	<input type="hidden" id="msgSelCheckBox" name="msgSelCheckBox" value="${errorMsgs.SEL_CHK_BOX}">
+	<input type="hidden" id="msgSelConf" name="msgSelConf" value="${errorMsgs.SEL_CONF}">
+	<input type="hidden" id="msgFutureDate" name="msgFutureDate" value="${errorMsgs.ERR_FUTURE_DATE}">
+	<input type="hidden" id="msgSelClientType" name="msgSelClientType" value="${errorMsgs.SEL_CLIENT_TYPE}">
+	<input type="hidden" id="msgSelRiskRating" name="msgSelRiskRating" value="${errorMsgs.SEL_RISK_RATING}">
+	<input type="hidden" id="msgSelAutoApproval" name="msgSelAutoApproval" value="${errorMsgs.SEL_AUTO_APPROVAL}">
+	<input type="hidden" id="msgComments" name="msgComments" value="${errorMsgs.ERR_COMMENTS}">
+	<input type="hidden" id="totalCount" name="totalCount" value="">
+	 <div id="greyout" style="display : none"></div>	 
+       <div class="responseMsg" id="responseMsgDiv"></div>
+     <br />
+     
+     <div id="editAddpopUp" style="display:none;z-index:300;width: 40%; position:absolute; margin-left: 25%; margin-top: 10%; margin-right: 25%;">     
+                <%@ include file="singletouchapprovalpopup.jsp"%> 
+     </div>
+     <div id="commentsPopUp" style="display:none;z-index:300;width: 400px; position:absolute; margin-left: 40%; margin-top: 10%;">
+              <%@ include file="staCommentsPopup.jsp"%>
+     </div>
+        
+     <div id="historyPopUp" class="tableBorder" style="display:none;z-index:300;width: 60%; position:absolute;margin-left: 20%;margin-top:2%;">  
+               <%@ include file="singleTouchApprovalHistory.jsp"%>
+     </div>
+     
+	 <div class="data" style="margin-left:10px"> &nbsp; Single Touch Approval Configuration Maker</div>				
+	 <div id="errorDiv" style="text-align: left; color: #CC3300; font-size: 12px;"> </div>
+	 
+	 <form id="singleTouchApprovalform">
+				<div align="right" style="margin-right: 1%;">
+					<a href="#" class="bbutton btn-historyStaConfig">${COMMON.HISTORY.label}</a> &nbsp;&nbsp;
+					<sec:authorize access="hasAuthority('COMPLMAKER') or hasAuthority('KYCMAKER')">
+					<a href="#" class="bbutton btn-editStaConfig">${COMMON.EDIT.label}</a> &nbsp;&nbsp;
+					<a href="#" id="add-row" class="bbutton btn-addStaConfig">${COMMON.ADD.label}</a> &nbsp;&nbsp;
+					<a href="#" id="delete-row" class="bbutton btn-deleteStaConfig">${COMMON.DELETE.label}</a> &nbsp;&nbsp;
+					</sec:authorize>
+					
+				</div>
+	<br>	
+	
+	<table width="98%" border="0" cellspacing="1" cellpadding="4" class="table_data">
+		<tbody>
+			<tr align="center">				
+				<th width="10%" class="table_header">${SINGLE_TOUCH_APPROVAL.COUNTRY_CODE.label}</th>
+				<th width="10%" class="table_header">${SINGLE_TOUCH_APPROVAL.CLIENT_TYPE.label}</th>
+				<th width="10%" class="table_header">${SINGLE_TOUCH_APPROVAL.RISK_RATING.label}</th>
+				<th width="10%" class="table_header">${SINGLE_TOUCH_APPROVAL.AUTO_APPROVAL.label}</th>
+				<th width="10%" class="table_header">${SINGLE_TOUCH_APPROVAL.MODIFIED_AUTO_APPROVAL_STATUS.label}</th>
+				<th width="10%" class="table_header">${SINGLE_TOUCH_APPROVAL.MODIFIED_WORKFLOW_STATUS.label}</th>				
+				<th width="10%" class="table_header">${SINGLE_TOUCH_APPROVAL.CREATED_BY.label}</th>
+				<th width="10%" class="table_header">${SINGLE_TOUCH_APPROVAL.CREATED_DATE.label}</th>
+				<th width="10%" class="table_header">${SINGLE_TOUCH_APPROVAL.UPDATED_BY.label}</th>				
+				<th width="10%" class="table_header">${SINGLE_TOUCH_APPROVAL.UPDATED_DATE.label}</th>
+			</tr>
+		</tbody>
+	</table>
+	 <table id= "accOpenTableData" width="98%" border="0" cellspacing="0" cellpadding="4" class="table_data">
+		<tbody>		
+		<c:forEach var="listValue" items="${initialWorkFlowMakers}">
+				<tr>
+					<td width="10%" align="left"    class="staModeTd"  tabindex="1">
+					<c:choose>
+						<c:when test="${isCompMaker == 'Y'}">
+							<input type='checkbox'  name ='singleTouchMakerCheckBox' class = "singleTouchMakerCheckBox">
+						</c:when>
+						<c:otherwise>
+							<input type='hidden'  name ='singleTouchMakerCheckBox' class = "singleTouchMakerCheckBox">
+						</c:otherwise>
+					</c:choose>
+					<%-- <sec:authorize access="hasAuthority('COMPLMAKER')"><input type='checkbox'  name ='singleTouchMakerCheckBox' class = "singleTouchMakerCheckBox"></sec:authorize> --%>  
+					${listValue.country} </td>					
+					<td width="10%" align="center"  class="accRiskScore">${listValue.clientType}</td>
+					<td width="10%" align="center"  class="accRiskScore">${listValue.formRiskRating}</td>
+					<td width="10%" align="center"  class="accRiskScore">${listValue.autoApproval}</td>					
+					<td width="10%" align="center"  id="accModifiedRs">${listValue.modifiedApproval}</td>
+					<td width="10%" align="center"  id="accModifiedWs">${listValue.modifiedWorkflowStatus}</td> 
+					<td width="10%" align="center"  id="rs" class="staCreateId">${listValue.createdBy}</td>
+					<td width="10%" align="center"  id="rs" class="staLastUpdatedDate">${listValue.createdDt}</td>
+					<td width="10%" align="center"  id="rs" class="staLastUpdatedId">${listValue.modifiedBy}</td>
+					<td width="10%" align="center"  id="rs" class="staLastUpdatedDate">${listValue.modifiedDt}</td>
+					<td  style="display:none;" class="refAccountOpen">${listValue.formRiskRating}</td>
+				</tr>
+		</c:forEach>			
+	  </tbody>
+	</table> 
+	<br>
+	<br>	
+	</tr>
+	&nbsp;			
+			
+</body>
+</html>
