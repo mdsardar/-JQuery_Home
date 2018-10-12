@@ -1,0 +1,3640 @@
+var customerNbr;
+var controlNbr;
+var attachmentID;
+var memberId;
+var country;
+var clientType;
+var formRisk;
+var empEndYearValMsg;
+var empStartYearValMsg;
+var topFiveCustomerSize;
+var mappingValue;
+var customerTable;
+var supplierTable;
+var cpopsLbqIds={};
+var dueDiligenceArr = ["8", "51", "52","53","6","54","62","64","65","17","168"];
+var isReset = false; 
+
+$(document).ready(function(){
+	
+	$("#interDtlsDisplId").hide();
+	$("#cardsClntPubTradedDispId").hide();
+	getUIValues();
+	controlNbr=document.getElementById("cddControlNumber").value;
+	customerNbr=document.getElementById('customerNumber').value;
+	country = document.getElementById('country').value;
+	clientType=document.getElementById('clientType').value;
+	formRisk=document.getElementById('formRiskRating').value;
+	if(clientType=="RETAIL_INDIV"){
+		$("#sowCorrobId").show();
+	}else{
+		$("#sowCorrobId").hide();
+	}
+	$("#interDtlsDisplId").hide();
+	onloadToShowHideQuestions();
+	showMemberDetails();
+	$("#homeBasedBusiId").hide();
+	var loopingLength = $("#memberSize").val();
+	for(var i = 0; i<loopingLength; i++) {
+		$("#primaryCountry"+i).prop('disabled','true');
+	}
+	if(document.getElementById("businessLine")!=null && document.getElementById("businessLine").value == 'Retail') {
+		if(clientType=="RETAIL_INDIV"){
+		checkSowTypes();
+		populateEddFormDetails();
+		var sowSize=0;
+		var	disableSowTypes = $("#sowTypeCodesHid").val();
+		$.each(disableSowTypes.split(','), function(idx,val) {
+			sowSize++;
+		});
+		if(sowSize == 0) {
+			if(document.getElementById("retailSow")){
+				document.getElementById("retailSow").style.border='1px solid #ff0000';
+				document.getElementById("retailSow").style.width='120px';
+			}
+		}
+		$("#retailSow").prop('size',sowSize);
+		$("#retailSow").prop('disabled',true);
+		disableReadOnlyFields();
+		}
+	}
+	if(clientType=="MERCHANT_ENTITY" || clientType=="RETAIL_ENTITY" ){
+		intMultiSelectModal();
+		populateEntityValues();
+		//$("#seedMoneyTiming").datepicker();
+		//$("#signifRevenueTiming").datepicker();
+		$("#custDateOfVisit").datepicker({ dateFormat: dateFormatDatePicker});
+		$("#mgmtRespContactDate").datepicker({ dateFormat: dateFormatDatePicker});
+		$("#annualBusiRev").prop('disabled','true');
+		//$("#busiRevCurrency").prop('disabled','true');
+		
+		var	enableLegalDocs = $("#legalDocsHidvalues").val();
+			if(enableLegalDocs!=null){
+			$.each(enableLegalDocs.split('~'), function(idx,val) {
+				if(val!=null && val!=""){
+					$("#legalFormDocs"+val).attr("checked", "checked");
+				}
+			});
+		}
+			
+			var	enableEntities = $("#entitiesHidvalues").val();
+				if(enableEntities!=null){
+				$.each(enableEntities.split('~'), function(idx,value) {
+					if(value!=null && value!=""){
+						$("#entitiesEngaged"+value).attr("checked", "checked");
+					}
+				});
+			}
+	}
+	if(clientType=="CARDS_ENTITY"){
+		intMultiSelectModal();
+		populateCardsEntity();
+		showClntPractHishRiskSection();
+		showClntDueDiligenceSection();
+		showClntServicesDueDiligenceSection();
+	}
+	
+	 $('.idDownload').click(function(){
+		 attachmentID = $(this).closest('tr').attr('data-attachId');
+		 memberId = $(this).closest('tr').attr('data-memberId');
+		 if(attachmentID==null || attachmentID=="" ){
+			 attachmentID=$("#attachmentHidId").val();
+		 }
+		 var fileUrl = '/amlcdd/cddUploadDoc/getDownloadDoc?attachmentId='+attachmentID+'&controlNumber='+controlNbr+'&customerNbr='+customerNbr;
+		$.ajax({
+			url : fileUrl,
+			method:'GET',
+			contentType:'application/json',
+			success : function(){
+				window.location = fileUrl;
+			},
+			errror : commonError
+
+		});
+	 });
+	 
+	 $('.idDownloadCLTDUEDIL001').click(function(){
+		 attachmentID = $(this).closest('tr').attr('data-attachId');
+		 if(attachmentID==null || attachmentID=="" ){
+			 attachmentID=$("#dueDiligenceAttachmentId").val();
+		 }
+		 memberId = "CLTDUEDIL001";
+		 var fileUrl = '/amlcdd/cddUploadDoc/getDownloadDoc?attachmentId='+attachmentID+'&controlNumber='+controlNbr+'&customerNbr='+customerNbr;
+		$.ajax({
+			url : fileUrl,
+			method:'GET',
+			contentType:'application/json',
+			success : function(){
+				window.location = fileUrl;
+			},
+			errror : commonError
+
+		});
+	 });
+	 
+	 $('.idDelete').click(function(){
+		 attachmentID = $(this).closest('tr').attr('data-attachId');
+		 memberId = $(this).closest('tr').attr('data-memberId');
+		 if(attachmentID==null || attachmentID=="" ){
+			 attachmentID=$("#attachmentHidId").val();
+		 }
+		 var dialogMsg="Do you want to delete the Document";
+		 document.getElementById('dialogMessage').html=dialogMsg;
+			if (confirm(dialogMsg) == true) {
+		 var deleteUrl='/amlcdd/cddUploadDoc/deleteUploadDocument?deletedAtchIds='+attachmentID;
+		 $.ajax({
+			 url: deleteUrl,
+			 method: "POST",
+			 contentType: 'application/json',
+			 success: function(respTxt){
+				 if(document.getElementById('downlDocsId'+memberId)){
+						 var docAtaId="downlDocsId"+memberId;
+							document.getElementById('downlDocsId'+memberId).innerHTML = "";
+						if(respTxt && respTxt.trim() !=' ') {
+							if(document.getElementById("successMsgDiv")) {
+								document.getElementById("successMsgDiv").style.display = "";
+								document.getElementById("successMsgDiv").innerHTML=respTxt.trim();
+							}
+						}
+						$("#downlDocsId"+memberId).hide();
+						$("#idEddDelete"+memberId).hide();
+						$("#btnCddUploadPopup"+memberId).show();
+						
+				 }
+				 else{
+					 if(document.getElementById("attachmentHidId")) {
+							document.getElementById("attachmentHidId").innerHTML = "";
+							document.getElementById("attachmentHidId").value = "";
+						 }
+					 if(respTxt && respTxt.trim() !=' ') {
+						if(document.getElementById("successMsgDiv")) {
+							document.getElementById("successMsgDiv").style.display = "";
+							document.getElementById("successMsgDiv").innerHTML=respTxt.trim();
+						}
+					}
+					 clearAttachment(); 
+				 }
+			 },
+			 error : commonError
+		 });
+			}
+			else{
+		    	closePopup('docUploadDialog');
+			}
+	 });
+	 $('#idEddDeleteCLTDUEDIL001').click(function(){
+				 attachmentID = $(this).closest('tr').attr('data-attachId');
+				 memberId = "CLTDUEDIL001";
+				 if(attachmentID==null || attachmentID=="" ){
+					 attachmentID=$("#dueDiligenceAttachmentId").val();
+				 }
+				 var dialogMsg="Do you want to delete the Document";
+				 document.getElementById('dialogMessage').html=dialogMsg;
+					if (confirm(dialogMsg) == true) {
+				 var deleteUrl='/amlcdd/cddUploadDoc/deleteUploadDocument?deletedAtchIds='+attachmentID;
+				 $.ajax({
+					 url: deleteUrl,
+					 method: "POST",
+					 contentType: 'application/json',
+					 success: function(respTxt){
+						 if(document.getElementById('downlDocsId'+memberId)){
+							var docAtaId="downlDocsId"+memberId;
+							document.getElementById('downlDocsId'+memberId).innerHTML = "";
+							if(respTxt && respTxt.trim() !=' ') {
+								if(document.getElementById("successMsgDiv")) {
+									document.getElementById("successMsgDiv").style.display = "";
+									document.getElementById("successMsgDiv").innerHTML=respTxt.trim();
+								}
+							}
+								$("#downlDocsId"+memberId).hide();
+								$("#idEddDelete"+memberId).hide();
+								$("#btnCddUploadPopup"+memberId).show();
+								
+						 }
+						 else{
+							 if(document.getElementById("dueDiligenceAttachmentId")) {
+									document.getElementById("dueDiligenceAttachmentId").innerHTML = "";
+									document.getElementById("dueDiligenceAttachmentId").value = "";
+								 }
+								if(respTxt && respTxt.trim() !=' ') {
+									if(document.getElementById("successMsgDiv")) {
+										document.getElementById("successMsgDiv").style.display = "";
+										document.getElementById("successMsgDiv").innerHTML=respTxt.trim();
+									}
+								}
+								clearDuediligenceAttachment(); 
+						 }
+					 },
+					 error : commonError
+				 });
+					}
+					else{
+				    	closePopup('docUploadDialog');
+					}
+			 });
+	
+	
+	$('#CompanyProfitsID :input').off('change');
+	$('#CompanyProfitsID :input').on('change', function(event){
+		$('#CompanyProfitsID').attr('isChanged', true);
+	});
+	
+	$('#SalaryID :input').off('change');
+	$('#SalaryID :input').on('change', function(event){
+		$('#SalaryID').attr('isChanged', true);
+	});
+
+	$('#InheritanceDivID :input').off('change');
+	$('#InheritanceDivID :input').on('change', function(event){
+		$('#InheritanceDivID').attr('isChanged', true);
+	});
+
+	$('#InvestmentsTrustsID :input').off('change');
+	$('#InvestmentsTrustsID :input').on('change', function(event){
+		$('#InvestmentsTrustsID').attr('isChanged', true);
+	});
+
+	$('#OtherID :input').off('change');
+	$('#OtherID :input').on('change', function(event){
+		$('#OtherID').attr('isChanged', true);
+	});
+	
+	if(document.getElementById("topFiveCustomerSize")){
+		topFiveCustomerSize = document.getElementById("topFiveCustomerSize").value;
+	}
+	getTopFiveCustomersDataTable();
+	showHideCustomerDetailsDatatableInbuiltPagination();
+	
+	// Added for Supplier
+	getTopFiveSuppliersDataTable();
+	showHideSupplierDetailsDatatableInbuiltPagination();
+	
+	// Donor Details
+	getDonorDetailsDataTable();
+	showHideDonorDetailsDatatableInbuiltPagination();
+	$('#industryClassificationSystemNAIC').prop('disabled',true);
+	
+	
+	if((document.getElementById("noOfLocations")) && (document.getElementById("noOfLocations").value=='1'))
+	{
+		$("#homeBasedBusiId").show();
+	}
+	else
+		{
+		$("#homeBasedBusiId").hide();
+		}
+	
+	
+	
+	if((document.getElementById("publiclyTradedYes")) && (document.getElementById("publiclyTradedYes").checked==true))
+	{
+		$("#cardsPubTradedDispId").show();
+		$("#cardsPubTradedStkId").show();
+		$("#cardsClntPubTradedDispId").hide();
+		$("#cardsPrntPubTradDispId").hide();
+	}
+	
+
+	if((document.getElementById("publiclyTradedNo")) && (document.getElementById("publiclyTradedNo").checked==true))
+	{
+		$("#cardsClntPubTradedDispId").show();
+		$("#cardsPubTradedDispId").hide();
+		$("#cardsPubTradedStkId").hide();
+		$('#stockExchName').val('');
+		$('#percentPubShares').val('');
+	}
+	
+
+	if((document.getElementById("isParentPublTradedYes")) && (document.getElementById("isParentPublTradedYes").checked==true))
+	{
+		$("#cardsPrntPubTradDispId").show();
+	}
+	else
+		{
+		$("#cardsPrntPubTradDispId").hide();
+		}
+	
+	if((document.getElementById("isClntInterBusiOnlyYes")) && (document.getElementById("isClntInterBusiOnlyYes").checked==true))
+	{
+		$("#interDtlsDisplId").show();
+	}
+	else
+		{
+		$("#interDtlsDisplId").hide();
+		}
+	
+	
+	if((document.getElementById("annualBusiRev")) && (document.getElementById("annualBusiRev").value=="1"))
+	{
+		$("#businessCurcencyDisp").show();
+	}
+	else
+		{
+		$("#businessCurcencyDisp").hide();
+		}
+	$("#primaryCountry").prop('disabled',true);
+	
+	if($('#annualBusiRev').val() !=''){
+		$("#businessCurcencyDisp").show();
+	}else{
+		$("#businessCurcencyDisp").hide();
+	}
+	$("#annualBusiRev").change(function () {
+		if($('#annualBusiRev').val() !=''){
+			if($('#businessCurcencyDisp').val() !=''){
+				$('#busiRevCurrency').css({"border-color": "#cccccc", 
+		            "border-width":"1px", 
+		            "border-style":"solid"});
+			}else{
+				$('#busiRevCurrency').css({"border-color": "#ff0000", 
+		            "border-width":"1px", 
+		            "border-style":"solid"});
+				
+			}
+			
+		}
+	});
+	if (isFormReadonly('EDD') == 'Y') {
+		disableFormElements('eddVO', 'normal');
+	}
+	if(clientType=="CARDS_INDIV" && formRisk=="HL"){
+		if(isFormReadonly('EDD') == 'N'){
+			disableReadonlyFormElements('eddVO', 'normal');
+		}else{
+			disableFormElements('eddVO', 'normal');
+		}
+	}
+	resetBorderColorToElements('eddVO');
+});
+
+function uploadDoc(componentId){
+	var succs=openUploadDocumentPopup('DDA','EDD','EDD',componentId,'');
+}
+
+function getAttachment(savedCompId){
+	if (savedCompId == "CLTDUEDIL001") {
+		isReset = false;
+	}
+	
+	var fileAttachmentUrl='edd/upload?sectionNm='+savedCompId+'&controlNbr='+controlNbr+'&customerNbr='+customerNbr+'&country='+country;
+	$.ajax({
+		url : fileAttachmentUrl,
+		method:'POST',
+		contentType:'application/json',
+		success : function(data){
+			 var JSONObject = JSON.parse(data);
+		      if(JSONObject.status == 'SUCCESS'){
+			var attachments = JSONObject.attachments;
+	     	 populateUploadedDocs(attachments,savedCompId);
+		      }
+		},
+		errror : commonError
+
+	});
+
+}
+function getAttchmentCountForDownload(countUrl){
+	$.ajax({
+		url:countUrl,
+		method:'GET',
+		contentType:'application/json',
+		dataType:'json',
+		success:function(data){
+			if(data.attachmentCount == 0){
+				$("#isFileOverride").val(0);
+				document.getElementById("frmUpload").submit();
+			}else{
+				$("#dialogMessage").html(data.result);
+				$( "#dialog-confirm" ).dialog({
+			      resizable: false,
+			      height: "auto",
+			      width: 400,
+			      modal: true,
+			      buttons: {
+			        "Ok": function() {
+			          $("#isFileOverride").val(1);
+			        	document.getElementById("frmUpload").submit();
+			        },
+			        Cancel: function() {
+			          $( this ).dialog( "close" );
+			        }
+			      }
+			    });
+			}
+		},
+		error:function(req,error){
+			console.log(error);
+		}
+	});
+}
+
+
+function populateUploadedDocs(attachments,savedCompId){
+	var linkDetails ="";
+      	 var attachment = attachments[0];
+     	 var attachmentId = attachment.atchId;
+     	attachmentID = attachment.atchId;
+     	 var link = '<a href=javascript: onclick='
+				                      + 'downloadEvidenceDocs("'
+									  + attachmentId + '");return false; >'
+									  +attachment.atchNm
+									  + '</a>'+"  ";
+		linkDetails = linkDetails+link;	
+		 if(document.getElementById('downlDocsId'+savedCompId)){
+			 var compareId ="downlDocsId"+savedCompId;
+			 $('#downlDocsId'+savedCompId).html(linkDetails);
+				$("#downlDocsId"+savedCompId).show();
+				$("#idEddDelete"+savedCompId).show();
+				if ($("#downlDocsId"+savedCompId)) {
+					$("#downlDocsId"+savedCompId).closest('tr').attr('data-attachId',attachmentId);
+					var alrtat=$("#downlDocsId"+savedCompId).closest('tr').attr('data-attachId');
+				}
+				$("#btnCddUploadPopup"+savedCompId).hide();
+		 }
+		else{
+			$('#downlDocsId').html(linkDetails);
+			$("#downlDocsId").show();
+			$("#idEddDelete").show();
+			$("#btnCddUploadPopup").hide();
+			$('#attachmentHidId').val(attachmentId);
+		}
+		
+}
+ 
+function downloadEvidenceDocs(attachment){
+	var fileUrl = '/amlcdd/cddUploadDoc/getDownloadDoc?attachmentId='+attachment+'&controlNumber='+controlNbr+'&customerNbr='+customerNbr;
+	$.ajax({
+		url : fileUrl,
+		method:'GET',
+		contentType:'application/json',
+		success : function(){
+			window.location = fileUrl;
+		},
+		errror : commonError
+
+	});
+}
+
+function saveEddDetails(){
+	var jsonData=getEddJson();
+	showPopupLoader();
+		$.ajax({
+			url: "edd/saveEdd",
+			method:'POST',
+			contentType:'application/json',
+			dataType:'json',
+			data	:jsonData,
+			success:function(data){
+				updateStatusAfterSave();
+			},
+			error:function(req,error){
+				console.log(error);
+			}
+		});
+}
+
+function showMemberDetails() {
+	$(".toggle").off('click');
+	$(".toggle").on('click', function(event) {
+		if($(this).hasClass('expanded')) {
+			$(this).removeClass('expanded');
+		} else {
+			$(this).addClass('expanded');
+		}
+		if(document.getElementById("businessLine")!=null && document.getElementById("businessLine").value == 'Retail') {
+		$($(".detailEDD")[$(this).attr('data-index')]).slideToggle();
+		}
+		else if(document.getElementById("businessLine")!=null && document.getElementById("businessLine").value == 'Cards') {
+			$($(".detailScreen")[$(this).attr('data-index')]).slideToggle();
+		}
+	});
+}
+
+function showHideMajorExch(showHideMajEx){
+	if(showHideMajEx =="Yes") {
+		$("#majorExchangeId").show();
+	} else {
+		$("#majorExchangeId").hide();
+	}
+}
+
+function showHideSubDesc(showHideSubDes){
+	if(showHideSubDes =="Yes") {
+		
+		$("#empSubDetId").show();
+	} else {
+		$("#empSubDetId").hide();
+	}
+}
+function showCompRepDesc(compRepDes){
+	if(compRepDes =="Yes") {
+		$("#compRepDescId").show();
+	} else {
+		$("#compRepDescId").hide();
+	}
+}
+function showInheritRepDesc(inheritRepDes){
+	if(inheritRepDes =="Yes") {
+		$("#inhWealDescId").show();
+	} else {
+		$("#inhWealDescId").hide();
+	}
+}
+function showInvRepDesc(investRepDes){
+	if(investRepDes =="Yes") {
+		$("#investRepDescId").show();
+	} else {
+		$("#investRepDescId").hide();
+	}
+}
+// Start of Entity Conditional Functions 
+// Cards Entity
+
+function showCardsRevCurncy(annualRevVal){
+	if(annualRevVal==null || annualRevVal=="") {
+		$("#businessCurcencyDisp").hide();
+		$("#cardsRevCurencyLblId").hide();
+		$("#cardsRevCurencyId").hide();
+	} else {
+		$('#busiRevCurrency').val('');
+		$("#businessCurcencyDisp").show();
+		$("#cardsRevCurencyLblId").show();
+		$("#cardsRevCurencyId").show();
+	}
+}
+
+
+function changeMandatoryColour(busiRevCurrency){
+}
+
+function changeMandatoryColourForParStockEx(parentStockExhNm){
+}
+
+function changeMandatoryColourForStockEx(stockExchName){
+}
+
+
+function changeMandatoryColourForNoEmp(noOfemp){
+}
+
+
+
+
+
+
+
+
+function showCardsStockExDtls(cardsStockExhVal){
+	if(cardsStockExhVal =="Yes" || cardsStockExhVal =="Y") {
+		$("#cardsPubTradedDispId").show();
+		$("#cardsPubTradedStkId").show();
+		$("#cardsClntPubTradedDispId").hide();
+		if(document.getElementById('isParentPublTradedYes')){
+			document.getElementById('isParentPublTradedYes').checked = false;
+		}
+		if(document.getElementById('isParentPublTradedNo')){
+			document.getElementById('isParentPublTradedNo').checked = false;
+		}
+		$("#cardsPrntPubTradDispId").hide();
+	} else if(cardsStockExhVal=="No" || cardsStockExhVal =="N") {
+		$("#cardsClntPubTradedDispId").show();
+		$("#cardsPubTradedDispId").hide();
+		$("#cardsPubTradedStkId").hide();
+		$('#stockExchName').val('');
+		try{
+			document.getElementById('stockExchName').onblur();
+		} catch(e){
+		}
+		$('#percentPubShares').val('');
+	}
+}
+
+function showCardsParntStkEx(cardsPrtStockExhVal){
+	if(cardsPrtStockExhVal =="Yes") {
+		$("#cardsPrntPubTradDispId").show();
+	} else if(cardsPrtStockExhVal=="No") {
+		$("#cardsPrntPubTradDispId").hide();
+	}
+} 
+
+
+function changeMandatoryColourforStEx(stockExchName){
+}
+
+function showCardsHomeBusi(noOfLocationVal){
+	if(noOfLocationVal==null || noOfLocationVal=="") {
+		$("#homeBasedBusiId").hide();
+		$('#divhomeBasedBusi').hide();
+	}
+	else
+		{
+		
+	if(noOfLocationVal =="1") {
+		$("#homeBasedBusiId").show();
+		$('#divhomeBasedBusi').show();
+	} else {
+		$("#homeBasedBusiId").hide();
+		$('#divhomeBasedBusi').hide();
+	}
+} 
+}
+
+function showInternetDtls(webDtlsVal){
+	if(webDtlsVal =="Yes") {
+		$("#interDtlsDisplId").show();
+	} else if(webDtlsVal=="No") {
+		$("#interDtlsDisplId").hide();
+	}
+}
+
+// Retail/Merchant Entity
+function showEntityClnDiscpDtls(entClntDiscrDtlsVal){
+	if(entClntDiscrDtlsVal =="Yes") {
+		$("#clntDiscrDtlsId").show();
+	} else {
+		$("#clntDiscrDtlsId").hide();
+	}
+}
+
+function showStockExDtls(stockExhVal){
+	if(stockExhVal =="Yes") {
+		$("#pubTradedDispId").show();
+		$("#clntPubTradedDispId").hide();
+		$("#partPubStkExhId").hide();
+		
+	} else if(stockExhVal=="No") {
+		$("#clntPubTradedDispId").show();
+		$("#pubTradedDispId").hide();
+		if(document.getElementById('isParentPublTradedYes') && document.getElementById('isParentPublTradedYes').checked){
+			$("#partPubStkExhId").show();
+		}
+		
+	}
+}
+
+function showParntStkEx(prtStockExhVal){
+	if(prtStockExhVal =="Yes") {
+		$("#partPubStkExhId").show();
+	} else if(prtStockExhVal=="No") {
+		$("#partPubStkExhId").hide();
+	}
+} 
+
+function showAmlSection(amlReqVal){
+	if(amlReqVal =="Yes") {
+		$("#amlReqDisplId").show();
+	} else if(amlReqVal=="No") {
+		$("#amlReqDisplId").hide();
+	}
+} 
+
+function showInternetDtls(webDtlsVal){
+	if(webDtlsVal =="Yes") {
+		$("#interDtlsDisplId").show();
+	} else if(webDtlsVal=="No") {
+		$("#interDtlsDisplId").hide();
+	}
+}
+
+function showEntOwnerDtls(entOwnerDtlsVal){
+	if(entOwnerDtlsVal =="Yes") {
+		$("#ownerDtlsDispId").show();
+	} else if(entOwnerDtlsVal=="No") {
+		$("#ownerDtlsDispId").hide();
+	}
+}
+
+function showBusActChngDtls(busiActChngVal){
+	if(busiActChngVal =="Yes") {
+		$("#busiActChnDltsDispId").show();
+	} else if(busiActChngVal=="No") {
+		$("#busiActChnDltsDispId").hide();
+	}
+}
+
+function showTop5CustDtls(custEnityVal){
+	if(custEnityVal=="Individual") {
+		$("#top5CustIndDtlsDispId").show();
+		$("#top5CustEntDispId").hide();
+	} else {
+		$("#top5CustEntDispId").show();
+		$("#top5CustIndDtlsDispId").hide(); 
+	}  
+}
+
+function showTop5SupplDtls(supplEnityVal){
+	if(supplEnityVal=="Individual") {
+		$("#top5SuppIndDtlsDispId").show();
+		$("#top5SuppEntDispId").hide();
+	}
+	else {
+		$("#top5SuppEntDispId").show();
+		$("#top5SuppIndDtlsDispId").hide();
+	}  
+}
+
+function showClntOSDtls(clntOSDtlsVal){
+	if(clntOSDtlsVal =="Yes") {
+		$("#clntOSDtlsDispId").show();
+	} else if(clntOSDtlsVal=="No") {
+		$("#clntOSDtlsDispId").hide();
+	}
+}
+
+function showHomeBusi(noOfLocationVal){
+	if(noOfLocationVal =="1") {
+		$("#homeBasedBusiId").show();
+	} else {
+		$("#homeBasedBusiId").hide();
+	}
+} 
+
+function showSpaceOccDtls(spaceOccVal){
+	if(spaceOccVal==null || spaceOccVal=="" || spaceOccVal=="0"){
+		$("#spaceOccDtlsId").hide();
+	}else{
+		$("#spaceOccDtlsId").show();
+	}
+}
+
+function showinvDesc(invDesc){
+	if(invDesc=="Y" || invDesc=="Yes"){
+		$("#invDescLbl").show();
+		$("#invDescText").show();
+		$("#invDescEmptyTd").hide();
+	}else{
+		$("#invDescLbl").hide();
+		$("#invDescText").hide();
+		$("#invDescEmptyTd").show();
+		$("#prodInvtryDesc").val('');
+	}
+}
+
+function showOthrExpl(othrMthd){
+	if(othrMthd=="OTHER" || othrMthd=="Other" ){
+		$("#custMthdLbl").show();
+		$("#custMthdText").show();
+		$("#custMthdEmptyTd").hide();
+	}else{
+		$("#custMthdLbl").hide();
+		$("#custMthdText").hide();
+		$("#custMthdEmptyTd").show();
+		$("#customerPaidOther").val('');
+	}
+}
+
+
+function showWrittenOnNo(writtenNo){
+	if(writtenNo=="N" || writtenNo=="No"){
+		$("#writtenNoExplId").show();
+	}else{
+		$("#writtenNoExplId").hide();
+		
+	}
+}
+function showBusDiff(busDifVal){
+	if(busDifVal=="Yes"){
+		$("#busiDifficulDispId").show();
+	}else{
+		$("#busiDifficulDispId").hide();
+	}
+}
+
+
+// End of Entity Conditional Functions
+function disableReadOnlyFields(){
+	$("#employmentTypeE").prop('disabled','true');
+	$("#employmentTypeS").prop('disabled','true');
+	$("#employmentTypeH").prop('disabled','true');
+	$("#employmentTypeO").prop('disabled','true');
+	$("#isClientCurEmplYes").prop('disabled','true');
+	$("#isClientCurEmplNo").prop('disabled','true');
+	$("#employerName").prop('disabled','true');
+	$("#address1").prop('disabled','true');
+	$("#address2").prop('disabled','true');
+	$("#address3").prop('disabled','true');
+	$("#address4").prop('disabled','true');
+	$("#empCity").prop('disabled','true');
+	$("#empState").prop('disabled','true');
+	$("#empPostalCd").prop('disabled','true');
+	$("#empCountry").prop('disabled','true');
+	$("#empPhone").prop('disabled','true');
+	$("#empWebsite").prop('disabled','true');
+	$("#empFax").prop('disabled','true');
+	$("#empEmail").prop('disabled','true');
+	$("#empRelLeng").prop('disabled','true');
+	$("#geoLocations").prop('disabled','true');
+	$("#indusType").prop('disabled','true');
+}
+
+function showEmplDetails(clientVal){
+	if(clientVal =="Yes") {
+		$("#empDetailId").show();
+	} else {
+		$("#empDetailId").hide();
+	}
+}
+
+function onloadToShowHideQuestions() {
+	if(document.getElementById("businessLine").value == 'Retail') {
+		$("#CompanyProfitsID").hide();
+		$("#SalaryID").hide();
+		$("#InheritanceDivID").hide();
+		$("#InvestmentsTrustsID").hide();
+		$("#OtherID").hide();
+		$("#sowCorrobId").show();
+		$("#empDetailId").hide();
+		$("#majorExchangeId").hide();
+		$("#compInherDetDiv").hide();
+		$("#compCurrentOwner").hide();
+		$("#compPastOwner").hide();
+		$("#invstInhMemDetDiv").hide();
+		$("#investInhTId").hide();
+		$("#investDetailsDivId").hide();
+		$("#investPortDetlsDivId").hide();
+		$("#emplOther").hide();
+		$("#compBusiName").hide();
+		$("#compEmpName").hide();
+		$("#inhBusiName").hide();
+		$("#inhEmpName").hide();          
+		$("#invstBusiName").hide();
+		$("#invstEmpName").hide();
+		$("#spfCorrobId").hide();
+		$("#investRepDescId").hide();
+		$("#compRepDescId").hide();
+		$("#inhWealDescId").hide();
+		$("#investPortDetlsDivId").hide();
+		$("#pubTradedDispId").hide();
+		$("#clntPubTradedDispId").hide();
+		$("#partPubStkExhId").hide();
+		$("#homeBasedBusiId").hide();
+		$("#incorporateId").hide();
+		$("#custSicLawId").hide();
+		$("#custSicBankId").hide();
+	}else if(document.getElementById("businessLine").value == 'Cards') {
+		$("#sowCorrobId").hide();
+		$("#cardsRevCurencyLblId").hide();
+		$("#cardsRevCurencyId").hide();
+		$("#cardsPubTradedDispId").hide();
+		$("#cardsPubTradedStkId").hide();
+		$("#cardsPrntPubTradDispLblId").hide();
+		$("#cardsPrntPubTradDispId").hide();
+	}
+}
+
+function showHideInhertDetails(showCompGif){
+	if(showCompGif =="Yes"){
+		$("#compInherDetDiv").show();
+	}
+	else{
+		$("#compInherDetDiv").hide();
+	}
+}
+
+function showHideOwnerLegalName(showHideOwner){
+	if(showHideOwner =='Yes') {
+		$("#compCurrentOwner").show();
+		$("#compPastOwner").hide();
+	} else {
+		$("#compPastOwner").show();
+		$("#compCurrentOwner").hide();
+	}
+}
+
+function showHideBasedonSourceOfWealth(investSowType){
+	if(investSowType =="INHERT") {
+		$("#investInhTId").show();
+		if(document.getElementById('invstIsAnyBusinessInheritedYes')!=null && document.getElementById('invstIsAnyBusinessInheritedYes').checked){
+			$("#invstInhMemDetDiv").show();
+		}
+		$("#investDetailsDivId").hide();
+		$("#investPortDetlsDivId").hide();
+	} else if(investSowType =="INVTRSTFND") {
+		$("#investInhTId").hide();
+		$("#invstInhMemDetDiv").hide();
+		$("#investDetailsDivId").show();
+			var corroDoc=$("#invstContrPort").val();
+			showHideInvPortSec(corroDoc);
+	} else {
+		$("#investDetailsDivId").hide();
+		$("#investInhTId").hide();
+		$("#invstInhMemDetDiv").hide();
+		$("#investPortDetlsDivId").hide();
+	}
+}
+
+
+function showHideCompMemberName(showHideComp){
+	if(showHideComp =="BO") {
+		$("#compBusiName").show();
+		$("#compEmpName").hide();
+	} else if(showHideComp =="EMP") {
+		$("#compBusiName").hide();
+		$("#compEmpName").show();
+	}else{
+		$("#compBusiName").hide();
+		$("#compEmpName").hide();
+	}
+}
+
+function showHideCorrobFields(levelOfCorrob){
+	if(levelOfCorrob =="0") {
+		clearAttachment();
+		$("#corrobWealthDocTypeId").hide();
+		$("#corrobWealthDoc").hide();
+		$('#corrobWealthDocType').val('');
+	}
+	else if(levelOfCorrob ==""){
+		clearAttachment();
+		$("#corrobWealthDocTypeId").hide();
+		$("#corrobWealthDoc").hide();
+		$('#corrobWealthDocType').val('');
+		
+	}
+	else {
+		$("#corrobWealthDocTypeId").show();
+		var corrobDocType = $("#corrobWealthDocType").val()
+		if(corrobDocType =="") {
+			clearAttachment();
+			$("#corrobWealthDoc").hide();
+		}
+		else{
+			$("#corrobWealthDoc").show();
+		}
+	}
+}
+
+function showHideCorrobDocFields(corrobWealthDocType){
+	if(corrobWealthDocType =="") {
+		$("#corrobWealthDoc").hide();
+	}
+	else{
+		$("#corrobWealthDoc").show();
+	}
+}
+
+
+function showHideInheritMemberName(showHideInh){
+	if(showHideInh =="BO") {
+		$("#inhBusiName").show();
+		$("#inhEmpName").hide();
+	} else if(showHideInh =="EMP") {
+		$("#inhBusiName").hide();
+		$("#inhEmpName").show();
+	} else {
+		$("#inhBusiName").hide();
+		$("#inhEmpName").hide();
+	}
+}
+
+function showInvInhDetails(showInvestInh){
+	if(showInvestInh =="Yes") {
+		$("#invstInhMemDetDiv").show();
+	} else {
+		$("#invstInhMemDetDiv").hide();
+	}
+}
+
+function showInvstBusMembDetail(showInvstVal){
+	if(showInvstVal =="BO") {
+		$("#invstBusiName").show();
+		$("#invstEmpName").hide();
+	} else  if(showInvstVal =="EMP") {
+		$("#invstBusiName").hide();
+		$("#invstEmpName").show();
+	} else {
+		$("#invstBusiName").hide();
+		$("#invstEmpName").hide();
+	}
+}
+
+function showHideInvPortSec(showInvPortVal){
+	if(showInvPortVal==""){
+		$("#investPortDetlsDivId").hide();
+	}else{
+		$("#investPortDetlsDivId").show();
+	}
+}
+
+
+function deleteDocument(){
+	var downDocId=$("#downlDocsId").html();
+	var attachmentHidId=$("#attachmentHidId").val();
+	var deleteUrl='/amlcdd/cddUploadDoc/deleteUploadDocument?deletedAtchIds='+attachmentHidId;
+	if(attachmentHidId!=null && attachmentHidId!="" && attachmentHidId!=undefined){
+		$.ajax({
+			url : deleteUrl,
+			 method: "POST",
+			contentType: 'application/json',
+			success: function(respTxt){
+				if(document.getElementById("attachmentHidId")) {
+					document.getElementById("attachmentHidId").innerHTML = "";
+					document.getElementById("attachmentHidId").value = "";
+				 }
+				if(respTxt && respTxt.trim() !=' ') {
+					if(document.getElementById("successMsgDiv")) {
+						document.getElementById("successMsgDiv").style.display = "";
+						document.getElementById("successMsgDiv").innerHTML=respTxt.trim();
+					}
+				}
+				clearAttachment();
+			},
+			errror : commonError
+
+		});
+	}
+}
+
+function deleteDocument(){
+	var downDocId=$("#downlDocsId").html();
+	var attachmentHidId=$("#attachmentHidId").val();
+	var deleteUrl='/amlcdd/cddUploadDoc/deleteUploadDocument?deletedAtchIds='+attachmentHidId;
+	if(attachmentHidId!=null && attachmentHidId!="" && attachmentHidId!=undefined){
+		$.ajax({
+			url : deleteUrl,
+			 method: "POST",
+			contentType: 'application/json',
+			success: function(respTxt){
+				if(document.getElementById("attachmentHidId")) {
+					document.getElementById("attachmentHidId").innerHTML = "";
+					document.getElementById("attachmentHidId").value = "";
+				 }
+				if(respTxt && respTxt.trim() !=' ') {
+					if(document.getElementById("successMsgDiv")) {
+						document.getElementById("successMsgDiv").style.display = "";
+						document.getElementById("successMsgDiv").innerHTML=respTxt.trim();
+					}
+				}
+				clearAttachment();
+			},
+			errror : commonError
+
+		});
+	}
+}
+
+function hiddenDeleteDocument(){
+	var downDocId=$("#downlDocsId").html();
+	var attachmentHidId=$("#attachmentHidId").val();
+	var deleteUrl='/amlcdd/cddUploadDoc/deleteUploadDocument?deletedAtchIds='+attachmentHidId;
+	if(attachmentHidId!=null && attachmentHidId!="" && attachmentHidId!=undefined){
+		$.ajax({
+			url : deleteUrl,
+			 method: "POST",
+			contentType: 'application/json',
+			success: function(respTxt){
+				if(document.getElementById("attachmentHidId")) {
+					document.getElementById("attachmentHidId").innerHTML = "";
+					document.getElementById("attachmentHidId").value = "";
+				 }
+				if(respTxt && respTxt.trim() !=' ') {
+					if(document.getElementById("successMsgDiv")) {
+						document.getElementById("successMsgDiv").style.display = "";
+						//document.getElementById("successMsgDiv").innerHTML=respTxt.trim();
+					}
+				}
+				clearAttachment();
+			},
+			errror : commonError
+
+		});
+	}
+}
+
+function deleteDocumentOfUboMem(memberId,index){
+	//var downDocId=$("#downlDocsId").html();
+	var attachmentHidId=$("#memberUboAttachId"+index).val();
+	var deleteUrl='/amlcdd/cddUploadDoc/deleteUploadDocument?deletedAtchIds='+attachmentHidId;
+	if(attachmentHidId!=null && attachmentHidId!="" && attachmentHidId!=undefined){
+		$.ajax({
+			url : deleteUrl,
+			 method: "POST",
+			contentType: 'application/json',
+			success: function(respTxt){
+					if(document.getElementById('downlDocsId'+memberId)){
+						var docAtaId="downlDocsId"+memberId;
+						document.getElementById('downlDocsId'+memberId).innerHTML = "";
+						if(respTxt && respTxt.trim() !=' ') {
+							if(document.getElementById("successMsgDiv")) {
+								document.getElementById("successMsgDiv").style.display = "";
+								document.getElementById("successMsgDiv").innerHTML=respTxt.trim();
+							}
+						}
+						$("#downlDocsId"+memberId).hide();
+						$("#idEddDelete"+memberId).hide();
+						$("#btnCddUploadPopup"+memberId).show();
+	
+					}
+			},
+			errror : commonError
+
+		});
+	}
+}
+
+function hiddenDeleteDocumentOfUboMem(memberId,index){
+	//var downDocId=$("#downlDocsId").html();
+	var attachmentHidId=$("#memberUboAttachId"+index).val();
+	var deleteUrl='/amlcdd/cddUploadDoc/deleteUploadDocument?deletedAtchIds='+attachmentHidId;
+	if(attachmentHidId!=null && attachmentHidId!="" && attachmentHidId!=undefined){
+		$.ajax({
+			url : deleteUrl,
+			 method: "POST",
+			contentType: 'application/json',
+			success: function(respTxt){
+					if(document.getElementById('downlDocsId'+memberId)){
+						var docAtaId="downlDocsId"+memberId;
+						document.getElementById('downlDocsId'+memberId).innerHTML = "";
+						if(respTxt && respTxt.trim() !=' ') {
+							if(document.getElementById("successMsgDiv")) {
+								//document.getElementById("successMsgDiv").style.display = "";
+								//document.getElementById("successMsgDiv").innerHTML=respTxt.trim();
+							}
+						}
+						$("#downlDocsId"+memberId).hide();
+						$("#idEddDelete"+memberId).hide();
+						$("#btnCddUploadPopup"+memberId).show();
+	
+					}
+			},
+			errror : commonError
+
+		});
+	}
+}
+
+function deleteDueDiligenceDocument(){
+	var downDocId=$("#downlDocsIdCLTDUEDIL001").html();
+	var attachmentHidId=$("#dueDiligenceAttachmentId").val();
+	var deleteUrl='/amlcdd/cddUploadDoc/deleteUploadDocument?deletedAtchIds='+attachmentHidId;
+	if(attachmentHidId!=null && attachmentHidId!="" && attachmentHidId!=undefined){
+		$.ajax({
+			url : deleteUrl,
+			 method: "POST",
+			contentType: 'application/json',
+			success: function(respTxt){
+				if(document.getElementById("dueDiligenceAttachmentId")) {
+					document.getElementById("dueDiligenceAttachmentId").innerHTML = "";
+					document.getElementById("dueDiligenceAttachmentId").value = "";
+				 }
+				if(respTxt && respTxt.trim() !=' ') {
+					if(document.getElementById("successMsgDiv")) {
+						document.getElementById("successMsgDiv").style.display = "";
+						document.getElementById("successMsgDiv").innerHTML=respTxt.trim();
+					}
+				}
+				clearDuediligenceAttachment();
+			},
+			errror : commonError
+
+		});
+	}
+}
+
+function setUploadHtml(memberId){
+	var valuploa=$("#btnCddUploadPopup").html();
+	valuploa='<a href="javascript:uploadDoc("'+memberId+'");" class="bbutton" id="btnCddUploadPopup">Upload</a>'+ " ";
+	$('#uploadDocsId').html(valuploa);
+	$("#uploadDocsId").show();
+	var id=$("#uploadDocsId").html();
+	document.getElementById("uploadDocsId").innerHTML=valuploa;
+	document.getElementById("uploadDocsId").style.display = "";
+	id=$("#uploadDocsId").html();
+}
+function clearAttachment(){
+	var valuploa=$("#btnCddUploadPopup").html();
+	$("#btnCddUploadPopup").show();
+	if(document.getElementById("downlDocsId")) {
+		document.getElementById("downlDocsId").innerHTML = "";
+		 document.getElementById("downlDocsId").style.display = "none";
+	 }
+	if(document.getElementById("idEddDelete")) {
+		 document.getElementById("idEddDelete").style.display = "none";
+	 }
+}
+
+function clearDuediligenceAttachment() {
+	$("#btnCddUploadPopupCLTDUEDIL001").show();
+	if(document.getElementById("downlDocsIdCLTDUEDIL001")) {
+		document.getElementById("downlDocsIdCLTDUEDIL001").innerHTML = "";
+		document.getElementById("downlDocsIdCLTDUEDIL001").style.display = "none";
+	 }
+	if(document.getElementById("idEddDeleteCLTDUEDIL001")) {
+		document.getElementById("idEddDeleteCLTDUEDIL001").style.display = "none";
+	 }
+}
+function saveEdd(){
+	var eddPerJson=getEddJson();
+	showPopupLoader();
+	$.ajax({
+		url : "edd/saveEdd",
+		data : eddPerJson,
+		type : "POST",
+		beforeSend : function(xhr) {
+			xhr.setRequestHeader("Content-Type", "application/json");
+		},
+		success : updateStatusAfterSave,
+		errror : commonError
+
+	});
+}
+
+function getEddJson(){
+	var eddJsonData="";
+	if(clientType=="RETAIL_INDIV" || clientType=="CARDS_INDIV"){
+		eddJsonData=getEddIndividualJson();
+	}
+	if(clientType=="CARDS_ENTITY" || clientType=="RETAIL_ENTITY" || clientType=="MERCHANT_ENTITY"){
+		if(clientType=="CARDS_ENTITY") {
+			$("#annualRevRetailHidId").val($("#annualBusiRev").val());
+		}
+		eddJsonData=getEddEntityJson();
+	}
+	return eddJsonData;
+}
+
+function updateStatusAfterSave(respTxt,status){
+	closePopupLoader();
+	var eddVO = JSON.parse(respTxt);
+	var count = 0;
+	if(clientType=="RETAIL_INDIV" || clientType=="CARDS_INDIV"){
+		
+		setEddIndividualHiddenValsAfterSave(eddVO);
+		
+	}
+	if(clientType=="RETAIL_ENTITY" || clientType=="MERCHANT_ENTITY"){
+		setEddEntityHiddenValsAfterSave(eddVO);
+	}
+	if(clientType=="CARDS_ENTITY"){
+		if(eddVO["objEddEntityDetailsVO"]["verNum"]!=null){
+			$('#eddVerNum').val(eddVO["objEddEntityDetailsVO"]["verNum"]);
+		}
+		if(eddVO["objEddEntityDetailsVO"]["exitingCountriesOps"]!=null){
+			$('#existingCountryOPSHid').val(eddVO["objEddEntityDetailsVO"]["exitingCountriesOps"]);
+		}
+		if(eddVO["objEddEntityDetailsVO"]["dueDiligenceLbqId"]!=null){
+			$('#dueDiligenceHidId').val(eddVO["objEddEntityDetailsVO"]["dueDiligenceLbqId"]);
+		}
+		if(eddVO["objEddEntityDetailsVO"]["dueDiligenceVersionNum"]!=null){
+			$('#dueDiligenceVerNum').val(eddVO["objEddEntityDetailsVO"]["dueDiligenceVersionNum"]);
+		}
+		if(eddVO["objEddEntityDetailsVO"]["cltDueDilAttchId"]!=null){
+			$('#dueDiligenceAttachmentId').val(eddVO["objEddEntityDetailsVO"]["cltDueDilAttchId"]);
+		}
+	}
+	var completionStatus = eddVO["formCompletionStatus"];
+	if(eddVO["errorMessages"] != null) {
+		count = Object.keys(eddVO["errorMessages"]).length;
+	}
+	if(eddVO["errorMessages"] != null && count > 0) {
+		displayErrorMsgs(eddVO["errorMessages"]);
+	} else {
+		if(document.getElementById("failureMsgDiv")) {
+			document.getElementById("failureMsgDiv").style.display = "none";
+		}
+		if(document.getElementById("successMsgDiv")) {
+			document.getElementById("successMsgDiv").style.display = "";
+		}
+	}
+	updateFormHighlighting(completionStatus,'EDD');
+	
+	$('#CompanyProfitsID').attr('isChanged', false);
+	$('#SalaryID').attr('isChanged', false);
+	$('#InheritanceDivID').attr('isChanged', false);
+	$('#InvestmentsTrustsID').attr('isChanged', false);
+	$('#OtherID').attr('isChanged', false);
+}
+function setEddIndividualHiddenValsAfterSave(eddVO){
+$('#eddVerNum').val(eddVO["objEddDetailsVO"]["eddVerNum"]);
+	var vernum=$("#eddVerNum").val();
+	if(eddVO["isCompanyProf"] == "Y") {
+		
+		$('#compBaseSowId').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["sourceOfWealthId"]); 
+		$('#compBaseSowVer').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["sowVerNum"]); 
+		
+		if(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["listKycSowBusinessVO"] != null 
+				&& eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["listKycSowBusinessVO"][0] != null) {
+				$('#compBusiSowBId').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["listKycSowBusinessVO"][0]["sowBusinessId"]); 
+				$('#compBusiVer').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["listKycSowBusinessVO"][0]["verNum"]); 
+				if(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["listKycSowBusinessVO"][0]["srcOfWlthMemId"]!=null){
+					$('#compBusiMemSowId').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["listKycSowBusinessVO"][0]["srcOfWlthMemId"]); 
+					$('#compBusiMemVer').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["listKycSowBusinessVO"][0]["memVerNum"]); 
+				}
+				
+		}
+				
+
+if(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["mapKycSowInheritanceVO"]["CMPCREATOR"]!=null){
+	$('#compInhCretSowBId').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["mapKycSowInheritanceVO"]["CMPCREATOR"][0]["sowInheritanceId"]); 
+	$('#compInhCretVer').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["mapKycSowInheritanceVO"]["CMPCREATOR"][0]["verNum"]); 
+	var compInhCretSowBIdhi=$("#compInhCretSowBId").val();
+	var compInhCretVer=$("#compInhCretVer").val();
+	if(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["mapKycSowInheritanceVO"]["CMPCREATOR"][0]["srcOfWlthMemId"]!=null){
+	$('#compInhCretMemSowId').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["mapKycSowInheritanceVO"]["CMPCREATOR"][0]["srcOfWlthMemId"]); 
+	$('#compInhCretMemVer').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["mapKycSowInheritanceVO"]["CMPCREATOR"][0]["memVerNum"]); 
+	}
+}
+
+var compInhCretSowBId=$("#compInhCretSowBId").val();
+var compInhCretVer=$("#compInhCretVer").val();
+
+if(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["listKycSowBusinessVO"][1]!=null){
+
+	$('#compBusiOwnSowBId').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["listKycSowBusinessVO"][1]["sowBusinessId"]); 
+	$('#compBusiOwnVer').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["listKycSowBusinessVO"][1]["verNum"]); 
+	if(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["listKycSowBusinessVO"][1]["srcOfWlthMemId"]!=null){
+	$('#compBusiOwnMemSowId').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["listKycSowBusinessVO"][1]["srcOfWlthMemId"]); 
+	$('#compBusiOwnMemVer').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["listKycSowBusinessVO"][1]["memVerNum"]); 
+	if(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["listKycSowBusinessVO"][1]["memberLegalName"]!=null){
+	$('#compBusNameBusiness').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["listKycSowBusinessVO"][1]["memberLegalName"]); 
+	}
+	}
+	}
+		/*if(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["listKycSowInheritanceVO"]!=null &&
+		eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["listKycSowInheritanceVO"][0]!=null){
+		$('#compInhGifSowBId').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["listKycSowInheritanceVO"][0]["sowInheritanceId"]); 
+		$('#compInhGifVer').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["listKycSowInheritanceVO"][0]["verNum"]); 
+		var compInhGifSowBIdhi=$("#compInhGifSowBId").val();
+		var compInhGifVer=$("#compInhGifVer").val();
+		if(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["listKycSowInheritanceVO"][0]["srcOfWlthMemId"]!=null){
+		$('#compInhGifMemSowId').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["listKycSowInheritanceVO"][0]["srcOfWlthMemId"]); 
+		$('#compInhGifMemVer').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["listKycSowInheritanceVO"][0]["memVerNum"]); 
+		}
+	}*/
+		
+		if(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["mapKycSowInheritanceVO"]!=null &&
+		eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["mapKycSowInheritanceVO"]["CMPGIFTOR"]!=null){
+		$('#compInhGifSowBId').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["mapKycSowInheritanceVO"]["CMPGIFTOR"][0]["sowInheritanceId"]); 
+		$('#compInhGifVer').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["mapKycSowInheritanceVO"]["CMPGIFTOR"][0]["verNum"]); 
+		var compInhGifSowBIdhi=$("#compInhGifSowBId").val();
+		var compInhGifVer=$("#compInhGifVer").val();
+		if(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["mapKycSowInheritanceVO"]["CMPGIFTOR"][0]["srcOfWlthMemId"]!=null){
+		$('#compInhGifMemSowId').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["mapKycSowInheritanceVO"]["CMPGIFTOR"][0]["srcOfWlthMemId"]); 
+		$('#compInhGifMemVer').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["mapKycSowInheritanceVO"]["CMPGIFTOR"][0]["memVerNum"]); 
+		}
+	}
+		var compInhGifSowBId=$("#compInhGifSowBId").val();
+		var compInhGifVer=$("#compInhGifVer").val();
+	if(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["objKycSowEmployerVO"]!=null){
+	$('#compEmpSowBId').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["objKycSowEmployerVO"]["sowEmployerId"]); 
+	$('#compEmpVer').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["objKycSowEmployerVO"]["verNum"]); 
+	if(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["objKycSowEmployerVO"]["memberLegalName"]!=null){
+	$('#compBusEmplyerName').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["objKycSowEmployerVO"]["memberLegalName"]); 
+	}
+	if(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["objKycSowEmployerVO"]["srcOfWlthMemId"]!=null){
+	$('#compEmpMemSowId').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["objKycSowEmployerVO"]["srcOfWlthMemId"]); 
+	$('#compEmpMemVer').val(eddVO["objEddSowVO"]["objEddSowCompanyProfitsVO"]["objKycSowEmployerVO"]["memVerNum"]); 
+	}
+	}
+
+	}
+	
+	if(eddVO["isSalary"] == "Y") {
+		$('#salBaseSowId').val(eddVO["objEddSowVO"]["objEddSowSalaryVO"]["sourceOfWealthId"]); 
+		$('#salBaseSowVer').val(eddVO["objEddSowVO"]["objEddSowSalaryVO"]["sowVerNum"]);
+		
+		if (eddVO["objEddSowVO"]["objEddSowSalaryVO"]["objKycSowEmployerVO"]!=null){
+		$('#salEmpSowBId').val(eddVO["objEddSowVO"]["objEddSowSalaryVO"]["objKycSowEmployerVO"]["sowEmployerId"]);
+		$('#salEmpVer').val(eddVO["objEddSowVO"]["objEddSowSalaryVO"]["objKycSowEmployerVO"]["verNum"]);
+		$('#salEmpMemSowId').val(eddVO["objEddSowVO"]["objEddSowSalaryVO"]["objKycSowEmployerVO"]["srcOfWlthMemId"]);
+		$('#salEmpMemVer').val(eddVO["objEddSowVO"]["objEddSowSalaryVO"]["objKycSowEmployerVO"]["memVerNum"]);
+		}
+	}
+	
+	if(eddVO["isInheritance"] == "Y") {
+
+		$('#inheritBaseSowId').val(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["sourceOfWealthId"]);  
+		$('#inheritBaseSowVer').val(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["sowVerNum"]); 
+		
+		var sowid=$("#inheritBaseSowId").val();
+		var vernum=$("#inheritBaseSowVer").val();
+		if(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["listKycSowInheritanceVO"] !=null 
+				&& eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["listKycSowInheritanceVO"][0] != null) {
+			$('#inheritInhGifSowBId').val(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["listKycSowInheritanceVO"][0]["sowInheritanceId"]); 
+			$('#inheritInhGifVer').val(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["listKycSowInheritanceVO"][0]["verNum"]); 
+			var inheritInhGifVer=$("#inheritInhGifVer").val();
+			if(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["listKycSowInheritanceVO"][0]["srcOfWlthMemId"]!=null){
+			$('#inheritInhGifMemSowId').val(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["listKycSowInheritanceVO"][0]["srcOfWlthMemId"]); 
+			$('#inheritInhGifMemVer').val(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["listKycSowInheritanceVO"][0]["memVerNum"]); 
+	        
+			}
+			var inheritInhGifSowBId=$("#inheritInhGifSowBId").val();
+			var inheritInhGifVer=$("#inheritInhGifVer").val();
+		}
+		
+if(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["listKycSowInheritanceVO"][1]!=null){
+		$('#inheritInhCretSowBId').val(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["listKycSowInheritanceVO"][1]["sowInheritanceId"]); 
+		$('#inheritInhCretVer').val(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["listKycSowInheritanceVO"][1]["verNum"]); 
+		$('#inheritInhCretMemSowId').val(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["listKycSowInheritanceVO"][1]["srcOfWlthMemId"]); 
+		$('#inheritInhCretMemVer').val(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["listKycSowInheritanceVO"][1]["memVerNum"]); 
+       
+}
+		
+		if(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["objKycSowEmployerVO"]!=null){
+		$('#inheritEmpSowBId').val(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["objKycSowEmployerVO"]["sowEmployerId"]); 
+		$('#inheritEmpVer').val(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["objKycSowEmployerVO"]["verNum"]); 
+		if(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["objKycSowEmployerVO"]["srcOfWlthMemId"]!=null){
+		$('#inheritEmpMemSowId').val(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["objKycSowEmployerVO"]["srcOfWlthMemId"]); 
+		$('#inheritEmpMemVer').val(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["objKycSowEmployerVO"]["memVerNum"]); 
+		$('#inhBusEmplyerName').val(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["objKycSowEmployerVO"]["memberLegalName"]); 
+		}
+}
+		if(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["objKycSowBusinessVO"]!=null){
+
+		$('#inheritBusiOwnSowBId').val(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["objKycSowBusinessVO"]["sowBusinessId"]); 
+		$('#inheritBusiOwnVer').val(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["objKycSowBusinessVO"]["verNum"]); 
+		if(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["objKycSowBusinessVO"]["srcOfWlthMemId"]!=null){
+		$('#inheritBusiOwnMemSowId').val(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["objKycSowBusinessVO"]["srcOfWlthMemId"]); 
+		$('#inheritBusiOwnMemVer').val(eddVO["objEddSowVO"]["objEddSowInheritanceVO"]["objKycSowBusinessVO"]["memVerNum"]); 
+		}	
+}
+	}
+	
+	if(eddVO["isInvestment"] == "Y") {
+
+		$('#investBaseSowId').val(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["sourceOfWealthId"]);  
+		$('#investBaseSowVer').val(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["sowVerNum"]); 
+		if(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["objKycSowInvestmentVO"]!=null){
+		$('#investIvtSowBId').val(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["objKycSowInvestmentVO"]["sowInvestmentId"]); 
+		$('#investIvtVer').val(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["objKycSowInvestmentVO"]["verNum"]); 
+		if(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["objKycSowInvestmentVO"]["srcOfWlthMemId"]!=null){
+		$('#investIvtMemSowId').val(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["objKycSowInvestmentVO"]["srcOfWlthMemId"]); 
+		$('#investIvtMemVer').val(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["objKycSowInvestmentVO"]["memVerNum"]); 
+	}
+	}
+	if(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["objKycSowBusinessVO"]!=null){
+		$('#investBusiOwnSowBId').val(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["objKycSowBusinessVO"]["sowBusinessId"]); 
+		$('#investBusiOwnVer').val(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["objKycSowBusinessVO"]["verNum"]); 
+		if(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["objKycSowBusinessVO"]["srcOfWlthMemId"]!=null){
+		$('#investBusiOwnMemSowId').val(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["objKycSowBusinessVO"]["srcOfWlthMemId"]); 
+		$('#investBusiOwnMemVer').val(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["objKycSowBusinessVO"]["memVerNum"]); 
+	    }
+		}
+		if(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["listKycSowInheritanceVO"]!=null && eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["listKycSowInheritanceVO"][0]!=null){
+		$('#investInhGifSowBId').val(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["listKycSowInheritanceVO"][0]["sowInheritanceId"]); 
+		$('#investInhGifVer').val(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["listKycSowInheritanceVO"][0]["verNum"]); 
+		if(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["listKycSowInheritanceVO"][0]["srcOfWlthMemId"]!=null){
+		$('#investInhGifMemSowId').val(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["listKycSowInheritanceVO"][0]["srcOfWlthMemId"]); 
+		$('#investInhGifMemVer').val(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["listKycSowInheritanceVO"][0]["memVerNum"]); 
+		}
+		}
+		if(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["listKycSowInheritanceVO"]!=null && eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["listKycSowInheritanceVO"][1]!=null){
+		$('#investInhCretSowBId').val(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["listKycSowInheritanceVO"][1]["sowInheritanceId"]); 
+		$('#investInhCretVer').val(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["listKycSowInheritanceVO"][1]["verNum"]); 
+		if(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["listKycSowInheritanceVO"][1]["srcOfWlthMemId"]!=null){
+		$('#investInhCretMemSowId').val(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["listKycSowInheritanceVO"][1]["srcOfWlthMemId"]); 
+		$('#investInhCretMemVer').val(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["listKycSowInheritanceVO"][1]["memVerNum"]); 
+		}
+		}
+		
+		if(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["objKycSowEmployerVO"]!=null){
+		$('#investEmpSowBId').val(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["objKycSowEmployerVO"]["sowEmployerId"]); 
+		$('#investEmpVer').val(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["objKycSowEmployerVO"]["verNum"]); 
+		if(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["objKycSowEmployerVO"]["srcOfWlthMemId"]!=null){
+		$('#investEmpMemSowId').val(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["objKycSowEmployerVO"]["srcOfWlthMemId"]); 
+		$('#investEmpMemVer').val(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["objKycSowEmployerVO"]["memVerNum"]); 
+		$('#investBusEmplyerName').val(eddVO["objEddSowVO"]["objEddSowInvestmentVO"]["objKycSowEmployerVO"]["memberLegalName"]); 
+		}
+		}
+	}
+	if(eddVO["isOther"] == "Y") {
+		$('#otherBaseSowId').val(eddVO["objEddSowVO"]["objEddSowOtherTypeVO"]["sourceOfWealthId"]);
+		$('#otherBaseSowVer').val(eddVO["objEddSowVO"]["objEddSowOtherTypeVO"]["sowVerNum"]);
+		}
+}
+
+function setEddEntityHiddenValsAfterSave(eddVO){
+	if(eddVO["listEDDMemberVO"]!=null){
+		var memberListSize=$("#memberSize").val();;
+		for(i=0;i<memberListSize;i++){
+			if(eddVO["listEDDMemberVO"][i]["memberUboVerNum"]!=null){
+				$('#memberUboId'+i).val(eddVO["listEDDMemberVO"][i]["memberUBOId"]);
+				$('#memberUboVer'+i).val(eddVO["listEDDMemberVO"][i]["memberUboVerNum"]);
+				$('#memberUboAttachId'+i).val(eddVO["listEDDMemberVO"][i]["attachmentId"]);
+				$('#uboExistingCorrob'+i).val(eddVO["listEDDMemberVO"][i]["existingCorrobSrcWealth"]);
+				$('#uboExistingSOW'+i).val(eddVO["listEDDMemberVO"][i]["existingSourceOfWealth"]);
+			}
+		}
+	}
+	
+	if(eddVO["objEddEntityDetailsVO"]["exitingCountriesOps"]!=null){
+		$('#existingCountryOPSHid').val(eddVO["objEddEntityDetailsVO"]["exitingCountriesOps"]);
+	}
+	if(eddVO["objEddEntityDetailsVO"]["verNum"]!=null){
+		$('#eddVerNum').val(eddVO["objEddEntityDetailsVO"]["verNum"]);
+	}
+	if(eddVO["objEddEntityDetailsVO"]["legalEntitiesLbqId"]!=null){
+			$('#legalEntitiesHidId').val(eddVO["objEddEntityDetailsVO"]["legalEntitiesLbqId"]);
+		}
+	if(eddVO["objEddEntityDetailsVO"]["noLegalDocsLbqId"]!=null){
+			$('#noLegalDocsHidId').val(eddVO["objEddEntityDetailsVO"]["noLegalDocsLbqId"]);
+		}
+	if(eddVO["objEddEntityDetailsVO"]["nonBankingFinclInstLbqId"]!=null){
+			$('#nonBankingFinclInstHidId').val(eddVO["objEddEntityDetailsVO"]["nonBankingFinclInstLbqId"]);
+		}
+	if(eddVO["objEddEntityDetailsVO"]["clnGovtOwnOrCtrlLbqId"]!=null){
+		$('#clnGovtOwnOrCtrlHidId').val(eddVO["objEddEntityDetailsVO"]["clnGovtOwnOrCtrlLbqId"]);
+	}
+	if(eddVO["objEddEntityDetailsVO"]["sameOwnerShipFiveYrsLbqId"]!=null){
+		$('#sameOwnerShipFiveYrsHidId').val(eddVO["objEddEntityDetailsVO"]["sameOwnerShipFiveYrsLbqId"]);
+	}
+	if(eddVO["objEddEntityDetailsVO"]["clntInCntryRestrictedLbqId"]!=null){
+		$('#clntInCntryRestrictedHidId').val(eddVO["objEddEntityDetailsVO"]["clntInCntryRestrictedLbqId"]);
+	}
+	if(eddVO["objEddEntityDetailsVO"]["entityEngagedLbqId"]!=null){
+		$('#entityEngagedHidId').val(eddVO["objEddEntityDetailsVO"]["entityEngagedLbqId"]);
+	}
+	if(eddVO["objEddEntityDetailsVO"]["dueDiligenceLbqId"]!=null){
+		$('#dueDiligenceHidId').val(eddVO["objEddEntityDetailsVO"]["dueDiligenceLbqId"]);
+	}
+	if(eddVO["objEddEntityDetailsVO"]["compantExpDifficultiesLbqId"]!=null){
+		$('#compantExpDifficultiesHidId').val(eddVO["objEddEntityDetailsVO"]["compantExpDifficultiesLbqId"]);
+	}
+	if(eddVO["objEddEntityDetailsVO"]["companyDiffExplainLbqId"]!=null){
+		$('#companyDiffExplainHidId').val(eddVO["objEddEntityDetailsVO"]["companyDiffExplainLbqId"]);
+	}
+	if(eddVO["objEddEntityDetailsVO"]["customerPaidOtherLbqId"]!=null){
+		$('#customerPaidOtherHidId').val(eddVO["objEddEntityDetailsVO"]["customerPaidOtherLbqId"]);
+	}
+	if(eddVO["objEddEntityDetailsVO"]["dueDiligenceVersionNum"]!=null){
+		$('#dueDiligenceVerNum').val(eddVO["objEddEntityDetailsVO"]["dueDiligenceVersionNum"]);
+	}
+	if(eddVO["objEddEntityDetailsVO"]["legalEntitiesVerNum"]!=null){
+		$('#legalEntitiesVerNum').val(eddVO["objEddEntityDetailsVO"]["legalEntitiesVerNum"]);
+	}
+		if(eddVO["objEddEntityDetailsVO"]["noLegalDocsVerNum"]!=null){
+		$('#noLegalDocsVerNum').val(eddVO["objEddEntityDetailsVO"]["noLegalDocsVerNum"]);
+			}
+		if(eddVO["objEddEntityDetailsVO"]["nonBankingFinclInstVerNum"]!=null){
+		$('#nonBankingFinclInstVerNum').val(eddVO["objEddEntityDetailsVO"]["nonBankingFinclInstVerNum"]);
+			}
+		if(eddVO["objEddEntityDetailsVO"]["clnGovtOwnOrCtrlVerNum"]!=null){
+		$('#clnGovtOwnOrCtrlVerNum').val(eddVO["objEddEntityDetailsVO"]["clnGovtOwnOrCtrlVerNum"]);
+			}
+		if(eddVO["objEddEntityDetailsVO"]["sameOwnerShipFiveYrsVerNum"]!=null){
+		$('#sameOwnerShipFiveYrsVerNum').val(eddVO["objEddEntityDetailsVO"]["sameOwnerShipFiveYrsVerNum"]);
+			}
+		if(eddVO["objEddEntityDetailsVO"]["clntInCntryRestrictedVerNum"]!=null){
+		$('#clntInCntryRestrictedVerNum').val(eddVO["objEddEntityDetailsVO"]["clntInCntryRestrictedVerNum"]);
+			}
+		if(eddVO["objEddEntityDetailsVO"]["entityEngagedVerNum"]!=null){
+		$('#entityEngagedVerNum').val(eddVO["objEddEntityDetailsVO"]["entityEngagedVerNum"]);
+			}
+		if(eddVO["objEddEntityDetailsVO"]["compantExpDifficultiesVerNum"]!=null){
+			$('#compantExpDifficultiesVerNum').val(eddVO["objEddEntityDetailsVO"]["compantExpDifficultiesVerNum"]);
+			}
+		if(eddVO["objEddEntityDetailsVO"]["companyDiffExplainVerNum"]!=null){
+			$('#companyDiffExplainVerNum').val(eddVO["objEddEntityDetailsVO"]["companyDiffExplainVerNum"]);
+		}
+		if(eddVO["objEddEntityDetailsVO"]["customerPaidOtherVerNum"]!=null){
+			$('#customerPaidOtherVerNum').val(eddVO["objEddEntityDetailsVO"]["customerPaidOtherVerNum"]);
+		}
+		if(eddVO["objEddEntityDetailsVO"]["custSiccode"]!=null){
+			$('#custSicCodeHidId').val(eddVO["objEddEntityDetailsVO"]["custSiccode"]);
+		}
+		var custSicCodeAftSave=$("#custSicCodeHidId").val();
+		if(custSicCodeAftSave=="10"){
+			resetDiveElements('custSicLawId');
+			$("#custSicBankId").show();
+			$("#custSicLawId").hide();
+		}else if(custSicCodeAftSave=="18"){
+			resetDiveElements('amlReqDisplId');
+			resetDiveElements('custSicBankId');
+			$("#custSicBankId").hide();
+			$("#amlReqDisplId").hide();
+			$("#custSicLawId").show();
+		}else{
+			resetDiveElements('amlReqDisplId');
+			resetDiveElements('custSicBankId');
+			resetDiveElements('custSicLawId');
+			$("#custSicBankId").hide();
+			$("#amlReqDisplId").hide();
+			$("#custSicLawId").hide();
+		}
+}
+function displayErrorMsgs(errorMessagesMap) {
+	var failureString = "";
+	var successString="";
+	for (var key in errorMessagesMap) {
+		if (errorMessagesMap.hasOwnProperty(key)) {
+			/*START-CHANGE/RAJARAJAN/05JUL2018/629*/
+			/*if(key !='successfullySavedMsg') {
+			  	failureString = failureString + "<br>" + errorMessagesMap[key];
+		  	} else {
+		  		successString =successString + "<br>" + errorMessagesMap[key];
+		  	}*/
+			/*END-CHANGE/RAJARAJAN/05JUL2018/629*/
+			failureString = failureString + "<br>" + errorMessagesMap[key];
+		}
+	}
+	if(document.getElementById("failureMsgDiv")) {
+		document.getElementById("failureMsgDiv").style.display = "";
+		document.getElementById("failureMsgDiv").innerHTML=failureString;
+	}
+	if(document.getElementById("successMsgDiv")) {
+		document.getElementById("successMsgDiv").style.display = "";
+		document.getElementById("successMsgDiv").innerHTML=successString;
+	}
+}
+
+function clearUnusedDataBeforSave(){
+	var ownerFlag=$("#compPastOwnerLegalName").val();
+	if(ownerFlag==""){
+		resetDiveElements('compPastOwner');
+	}
+}
+
+function resetCompltDiveElements(complDivName){
+	isReset = true;
+	var elems = $("#"+complDivName).find("input,select-one,select,textarea,select-multiple");
+	for (var index = 0; index < elems.length; index++) {
+		var type = elems[index].type;
+		if (type == "text") {
+			if(elems[index].disabled== false){
+				elems[index].value = '';
+				try{
+					elems[index].onchange();
+				} catch(e){
+					try{
+						elems[index].onblur();
+					} catch(ex){
+						
+					}
+				}
+			}
+		} else if (type == "textarea") {
+			if(elems[index].disabled== false){
+				elems[index].value = '';
+				try{
+					elems[index].onchange();
+				} catch(e){
+					try{
+						elems[index].onblur();
+					} catch(ex){
+						
+					}
+				}
+			}
+		} else if (type == "checkbox") {
+			if(elems[index].disabled== false){
+				elems[index].checked = false;
+			}
+		} else if (type == "radio") {
+			if(elems[index].disabled== false){
+				elems[index].checked = false;
+			}
+		} else if (type == "select-one") {
+			if(elems[index].disabled== false){
+				elems[index].value = elems[index].options[0].value;
+				if(elems[index].options[0].value == ''){
+					try{
+						elems[index].onblur();
+					} catch(e){
+					}
+				}
+			}
+		} else if (type == "select") {
+			if(elems[index].disabled== false){
+				elems[index].value = elems[index].options[0].value;
+				if(elems[index].options[0].value == ''){
+					try{
+						elems[index].onblur();
+					} catch(e){
+					}
+				}
+			}
+		} else if(type == "select-multiple"){
+			var id = elems[index].id;
+			if(elems[index].disabled== false && !(id.indexOf('from_') != -1 && id.indexOf('from_') == 0)){
+				 $("#"+elems[index].id+" option").each(function(){
+					$(this).remove();
+				 });
+				 try{
+					 elems[index].onblur();
+				 } catch(e){
+				 }
+			}
+		}
+	}
+	if(clientType=="CARDS_ENTITY"){
+		showClntPractHishRiskSection();
+		showClntDueDiligenceSection();
+		showClntServicesDueDiligenceSection();
+		clearDuediligenceAttachment();
+	}
+	clearAttachment();
+	 if(document.getElementById("failureMsgDiv")) {
+		 document.getElementById("failureMsgDiv").innerHTML = "";
+		 document.getElementById("failureMsgDiv").style.display = "none";
+	 }
+	 if(document.getElementById("successMsgDiv")) {
+		 document.getElementById("successMsgDiv").innerHTML = "";
+		 document.getElementById("successMsgDiv").style.display = "none";
+	 }
+	if(clientType=="RETAIL_INDIV"){
+		$('#CompanyProfitsID').attr('isChanged', true);
+		$('#SalaryID').attr('isChanged', true);
+		$('#InheritanceDivID').attr('isChanged', true);
+		$('#InvestmentsTrustsID').attr('isChanged', true);
+		$('#OtherID').attr('isChanged', true);
+	}
+
+}
+
+function resetDiveElements(divName) {
+	var elems = $("#"+divName).find("input,select-one,select,textarea");
+	for (var index = 0; index < elems.length; index++) {
+		var type = elems[index].type;
+		if (type == "text") {
+			if(elems[index].disabled== false){
+				elems[index].value = '';
+				try{
+					elems[index].onchange();
+				} catch(e){
+					try{
+						elems[index].onblur();
+					} catch(ex){
+						
+					}
+				}
+			}
+		} 
+		else if (type == "textarea") {
+			if(elems[index].disabled== false){
+				elems[index].value = '';
+				try{
+					elems[index].onchange();
+				} catch(e){
+					try{
+						elems[index].onblur();
+					} catch(ex){
+						
+					}
+				}
+			}
+		} else if (type == "checkbox") {
+			if(elems[index].disabled== false){
+				elems[index].checked = false;
+			}
+		} else if (type == "radio") {
+			if(elems[index].disabled== false){
+				elems[index].checked = false;
+			}
+		} else if (type == "select-one") {
+			if(elems[index].disabled== false){
+				elems[index].value = elems[index].options[0].value;
+				if(elems[index].options[0].value == ''){
+					try{
+						elems[index].onblur();
+					} catch(e){
+					}
+				}
+			}
+		} else if (type == "select") {
+			if(elems[index].disabled== false){
+				elems[index].value = elems[index].options[0].value;
+				if(elems[index].options[0].value == ''){
+					try{
+						elems[index].onblur();
+					} catch(e){
+					}
+				}
+			}
+		} else if(type == "select-multiple"){
+			var id = elems[index].id;
+			if(elems[index].disabled== false && !(id.indexOf('from_') != -1 && id.indexOf('from_') == 0)){
+				 $("#"+elems[index].id+" option").each(function(){
+					$(this).remove();
+				 })
+				 try{
+					 elems[index].onblur();
+				 } catch(e){
+				 }
+			}
+		} 
+	}
+
+}
+
+function displayOnloadExceptionMsgs(){
+	
+}
+
+function showHideEddDiv(){
+	
+	
+}
+
+
+function showHideCorrobFieldsUboMem(levelOfCorrobUbo,indexVal){
+	if(levelOfCorrobUbo =="0" || levelOfCorrobUbo =="") {
+		$("#corrobWealthDocTypeId"+indexVal).hide();
+		$("#corrobWealthDoc"+indexVal).hide();
+		//$("#corrobWealthId"+indexVal).hide();
+		$('#corrobWealthDocType').val('');
+	}
+	else {
+		$("#corrobWealthDocTypeId"+indexVal).show();
+		$("#corrobWealthDoc"+indexVal).show();
+		//$("#corrobWealthId"+indexVal).show();
+		/*var corrobDocType = $("#corrobWealthDocType"+indexVal).val()
+		if(corrobDocType =="") {
+			$("#corrobWealthDoc"+indexVal).hide();
+		}
+		else{
+			$("#corrobWealthDoc"+indexVal).show();
+		}*/
+	}
+}
+
+function showHideCorrobDocFieldsUbo(corrobWealthDocTypeUbo,index){
+	if(corrobWealthDocTypeUbo =="") {
+		$("#corrobWealthDoc"+index).hide();
+	}
+	else{
+		$("#corrobWealthDoc"+index).show();
+	}
+}
+
+function setRadioBTtoVO(radioBtnYes,radioBtnNo,resetNoDivId,resetYesDivId){
+	var radBtnVoValue="";
+	if(document.getElementById(radioBtnYes) && document.getElementById(radioBtnYes).checked) {
+		radBtnVoValue="Y";
+		if(resetYesDivId!=null && resetYesDivId!=""){
+			resetDiveElements(resetYesDivId);
+		}
+		
+	} else if(document.getElementById(radioBtnNo) && document.getElementById(radioBtnNo).checked) {
+		radBtnVoValue="N";
+		if(resetNoDivId!=null && resetNoDivId!=""){
+		resetDiveElements(resetNoDivId);
+		}
+	}
+	
+	return radBtnVoValue;
+}
+
+function getEddEntityJson(){
+var result=$("#callreportTxt").val();
+	var	top5CustMapValue	= $("#top5CustMapVal").val();
+	if(top5CustMapValue =="Individual") {
+		resetDiveElements('top5CustEntDispId');
+	} else if(top5CustMapValue =="") {
+		resetDiveElements('top5CustEntDispId');
+		resetDiveElements('top5CustIndDtlsDispId');
+		resetDiveElements('custCntryId');
+	} else {
+		resetDiveElements('top5CustIndDtlsDispId');
+	}
+	
+	
+	var	top5SupplMapValue	= $("#top5SupplMapVal").val();
+	if(top5SupplMapValue =="Individual") {
+		resetDiveElements('top5SuppEntDispId');
+	} else if(top5SupplMapValue =="") {
+		resetDiveElements('top5SuppEntDispId');
+		resetDiveElements('top5SuppIndDtlsDispId');
+		resetDiveElements('supplCntry');
+		
+		
+	} else {
+		resetDiveElements('top5SuppIndDtlsDispId');
+	}
+	var locationsVal=$("#noOfLocations").val();
+	if(locationsVal!="1") {
+		resetDiveElements('homeBasedBusiId');
+	}
+	
+	if((document.getElementById('publiclyTradedYes') && document.getElementById('publiclyTradedYes').checked) 
+			|| (document.getElementById('isParentPublTradedNo') && document.getElementById('isParentPublTradedNo').checked)){
+		resetDiveElements('partPubStkExhId');
+		if(clientType=="CARDS_ENTITY"){
+		resetDiveElements('cardsPrntPubTradDispId');
+		}
+	}
+	
+	if(!(document.getElementById('isClntInterBusiOnlyYes') && document.getElementById('isClntInterBusiOnlyYes').checked)){
+		//deleteDocument(); commented for solving SIT defect 449 
+		hiddenDeleteDocument();
+	}
+	
+	var hasDueDiligenceValue = checkNAICHasDueDiligenceValues();
+	if(isReset || (document.getElementById('doesClientServicesNo')  &&  document.getElementById('doesClientServicesNo').checked && !hasDueDiligenceValue)){
+		deleteDueDiligenceDocument();
+		$("#dueDiligenceDetails").val('');
+	} 
+	
+	var fieldSpaceOccupiedVal=$("#fieldSpaceOccupied").val();
+	if(document.getElementById('fieldSpaceOccupiedRENT') && document.getElementById('fieldSpaceOccupiedRENT').checked){
+		fieldSpaceOccupiedVal="R";
+	}else if(document.getElementById('fieldSpaceOccupiedOWN') && document.getElementById('fieldSpaceOccupiedOWN').checked){
+		fieldSpaceOccupiedVal="O";
+	}else if(document.getElementById('fieldSpaceOccupiedSUB') && document.getElementById('fieldSpaceOccupiedSUB').checked){
+		fieldSpaceOccupiedVal="S";
+	}else if(document.getElementById('fieldSpaceOccupiedCONCESS') && document.getElementById('fieldSpaceOccupiedCONCESS').checked){
+		fieldSpaceOccupiedVal="C";
+	}else if(document.getElementById('fieldSpaceOccupiedNCOMM') && document.getElementById('fieldSpaceOccupiedNCOMM').checked){
+		fieldSpaceOccupiedVal="N";
+	}
+	
+	
+	var isLegalEntitiesVal=$("#isLegalEntities").val();
+	if(document.getElementById('isLegalEntitiesCorp') && document.getElementById('isLegalEntitiesCorp').checked){
+		isLegalEntitiesVal="Corp";
+	}else if(document.getElementById('isLegalEntitiesPSE') && document.getElementById('isLegalEntitiesPSE').checked){
+		isLegalEntitiesVal="PSE";
+	}else if(document.getElementById('isLegalEntitiesPARTNER') && document.getElementById('isLegalEntitiesPARTNER').checked){
+		isLegalEntitiesVal="PARTNER";
+	}else if(document.getElementById('isLegalEntitiesLLC') && document.getElementById('isLegalEntitiesLLC').checked){
+		isLegalEntitiesVal="LLC";
+	}else if(document.getElementById('isLegalEntitiesNP') && document.getElementById('isLegalEntitiesNP').checked){
+		isLegalEntitiesVal="NP";
+	}else if(document.getElementById('isLegalEntitiesBANK') && document.getElementById('isLegalEntitiesBANK').checked){
+		isLegalEntitiesVal="BANK";
+	}else if(document.getElementById('isLegalEntitiesNBANK') && document.getElementById('isLegalEntitiesNBANK').checked){
+		isLegalEntitiesVal="NBANK";
+	}else if(document.getElementById('isLegalEntitiesCBANK') && document.getElementById('isLegalEntitiesCBANK').checked){
+		isLegalEntitiesVal="CBANK";
+	}else if(document.getElementById('isLegalEntitiesSOVEREIGN') && document.getElementById('isLegalEntitiesSOVEREIGN').checked){
+		isLegalEntitiesVal="SOVEREIGN";
+	}
+	
+	var legId=$("#legalFormDocsBR").val();
+	var legalDocsList=[$("#legalFormDocsCB").val(),$("#legalFormDocsCD").val(),$("#legalFormDocsBR").val(),$("#legalFormDocsAFS").val(),$("#legalFormDocsSV").val(),$("#legalFormDocsBWV").val(),$("#legalFormDocsSOVEREIGN").val()];
+	var legalDoscSep="";
+	if(document.getElementById('legalFormDocsCB') && document.getElementById('legalFormDocsCB').checked){
+		legalDoscSep=legalDoscSep+"~CB";
+	} if(document.getElementById('legalFormDocsCD') && document.getElementById('legalFormDocsCD').checked){
+		legalDoscSep=legalDoscSep+"~CD";
+	} if(document.getElementById('legalFormDocsBR') && document.getElementById('legalFormDocsBR').checked){
+		legalDoscSep=legalDoscSep+"~BR";
+	} if(document.getElementById('legalFormDocsAFS') && document.getElementById('legalFormDocsAFS').checked){
+		legalDoscSep=legalDoscSep+"~AFS";
+	} if(document.getElementById('legalFormDocsSV') && document.getElementById('legalFormDocsSV').checked){
+		legalDoscSep=legalDoscSep+"~SV";
+	} if(document.getElementById('legalFormDocsBWV') && document.getElementById('legalFormDocsBWV').checked){
+		legalDoscSep=legalDoscSep+"~BWV";
+	} if(document.getElementById('legalFormDocsSOVEREIGN') && document.getElementById('legalFormDocsSOVEREIGN').checked){
+		legalDoscSep=legalDoscSep+"~SOVEREIGN";
+	}
+	var entitiesEngagedSep="";
+	if(document.getElementById('entitiesEngagedEC')  &&  document.getElementById('entitiesEngagedEC').checked){
+		entitiesEngagedSep=entitiesEngagedSep+"~EC";
+		}    
+		if(document.getElementById('entitiesEngagedGG')  &&  document.getElementById('entitiesEngagedGG').checked){
+		entitiesEngagedSep=entitiesEngagedSep+"~GG";
+		}    
+		if(document.getElementById('entitiesEngagedTA')  &&  document.getElementById('entitiesEngagedTA').checked){
+		entitiesEngagedSep=entitiesEngagedSep+"~TA";
+		}    
+		if(document.getElementById('entitiesEngagedJGM')  &&  document.getElementById('entitiesEngagedJGM').checked){
+		entitiesEngagedSep=entitiesEngagedSep+"~JGM";
+		}    
+		if(document.getElementById('entitiesEngagedBTPC')  &&  document.getElementById('entitiesEngagedBTPC').checked){
+		entitiesEngagedSep=entitiesEngagedSep+"~BTPC";
+		}    
+		if(document.getElementById('entitiesEngagedMM')  &&  document.getElementById('entitiesEngagedMM').checked){
+		entitiesEngagedSep=entitiesEngagedSep+"~MM";
+		}    
+		if(document.getElementById('entitiesEngagedIB')  &&  document.getElementById('entitiesEngagedIB').checked){
+		entitiesEngagedSep=entitiesEngagedSep+"~IB";
+		}    
+		if(document.getElementById('entitiesEngagedOSCB')  &&  document.getElementById('entitiesEngagedOSCB').checked){
+		entitiesEngagedSep=entitiesEngagedSep+"~OSCB";
+		}    
+		if(document.getElementById('entitiesEngagedCBP')  &&  document.getElementById('entitiesEngagedCBP').checked){
+		entitiesEngagedSep=entitiesEngagedSep+"~CBP";
+		}    
+		if(document.getElementById('entitiesEngagedGS')  &&  document.getElementById('entitiesEngagedGS').checked){
+		entitiesEngagedSep=entitiesEngagedSep+"~GS";
+		}    
+		if(document.getElementById('entitiesEngagedIE')  &&  document.getElementById('entitiesEngagedIE').checked){
+		entitiesEngagedSep=entitiesEngagedSep+"~IE";
+		}    
+		if(document.getElementById('entitiesEngagedELECT')  &&  document.getElementById('entitiesEngagedELECT').checked){
+		entitiesEngagedSep=entitiesEngagedSep+"~ELECT";
+		}    
+		if(document.getElementById('entitiesEngagedBB')  &&  document.getElementById('entitiesEngagedBB').checked){
+		entitiesEngagedSep=entitiesEngagedSep+"~BB";
+		}    
+		if(document.getElementById('entitiesEngagedUCS')  &&  document.getElementById('entitiesEngagedUCS').checked){
+		entitiesEngagedSep=entitiesEngagedSep+"~UCS";
+		}    
+		if(document.getElementById('entitiesEngagedIMC')  &&  document.getElementById('entitiesEngagedIMC').checked){
+		entitiesEngagedSep=entitiesEngagedSep+"~IMC";
+		}    
+		if(document.getElementById('entitiesEngagedTPP')  &&  document.getElementById('entitiesEngagedTPP').checked){
+		entitiesEngagedSep=entitiesEngagedSep+"~TPP";
+		}    
+		if(document.getElementById('entitiesEngagedVCC')  &&  document.getElementById('entitiesEngagedVCC').checked){
+		entitiesEngagedSep=entitiesEngagedSep+"~VCC";
+		}    
+		if(document.getElementById('entitiesEngagedRCO')  &&  document.getElementById('entitiesEngagedRCO').checked){
+		entitiesEngagedSep=entitiesEngagedSep+"~RCO";
+		}
+		if(document.getElementById('entitiesEngagedFI')  &&  document.getElementById('entitiesEngagedFI').checked){
+			entitiesEngagedSep=entitiesEngagedSep+"~FI";
+		} 
+		if(document.getElementById('entitiesEngagedSOMO')  &&  document.getElementById('entitiesEngagedSOMO').checked){
+			entitiesEngagedSep=entitiesEngagedSep+"~SOMO";
+		}
+		if(document.getElementById('entitiesEngagedNBFI')  &&  document.getElementById('entitiesEngagedNBFI').checked){
+			entitiesEngagedSep=entitiesEngagedSep+"~NBFI";
+		}
+		
+		if(document.getElementById('entitiesEngagedMSB')  &&  document.getElementById('entitiesEngagedMSB').checked){
+			entitiesEngagedSep=entitiesEngagedSep+"~MSB";
+		}
+		if(document.getElementById('entitiesEngagedTC')  &&  document.getElementById('entitiesEngagedTC').checked){
+			entitiesEngagedSep=entitiesEngagedSep+"~TC";
+		}
+		if(document.getElementById('entitiesEngagedMT')  &&  document.getElementById('entitiesEngagedMT').checked){
+			entitiesEngagedSep=entitiesEngagedSep+"~MT";
+		}
+		if(document.getElementById('entitiesEngagedCC')  &&  document.getElementById('entitiesEngagedCC').checked){
+			entitiesEngagedSep=entitiesEngagedSep+"~CC";
+		}
+		if(document.getElementById('entitiesEngagedCDOE')  &&  document.getElementById('entitiesEngagedCDOE').checked){
+			entitiesEngagedSep=entitiesEngagedSep+"~CDOE";
+		}
+
+
+		var countriesOfPrimOpers = [];
+		var priPlaceBusi="";
+		if ($("#countriesOfPrimOpers")) {
+			$("#countriesOfPrimOpers option").each(function(index,element){
+				countriesOfPrimOpers.push($(element).val());
+				if(priPlaceBusi!=null && priPlaceBusi!=""){
+					priPlaceBusi=priPlaceBusi+$(element).val()+"~";
+				}
+				else{
+					priPlaceBusi=$(element).val()+"~";
+				}
+				
+			 }) 
+		}
+		var existingCountryOPS=[];
+		if ($("#existingCountryOPSHid")) {
+			$("#existingCountryOPSHid").each(function(index,element){
+				existingCountryOPS.push($(element).val());
+			 });
+		}
+		
+		var fieldcustomerpaid="";
+		if(document.getElementById('fieldcustomerpaidCASH')  &&  document.getElementById('fieldcustomerpaidCASH').checked){
+			fieldcustomerpaid="CASH";
+		}else if(document.getElementById('fieldcustomerpaidCHECK')  &&  document.getElementById('fieldcustomerpaidCHECK').checked){
+			fieldcustomerpaid="CHECK";
+		} else if(document.getElementById('fieldcustomerpaidCHARGE')  &&  document.getElementById('fieldcustomerpaidCHARGE').checked){
+			fieldcustomerpaid="CHARGE";
+		}else if(document.getElementById('fieldcustomerpaidWIRE')  &&  document.getElementById('fieldcustomerpaidWIRE').checked){
+			fieldcustomerpaid="WIRE";
+		}else if(document.getElementById('fieldcustomerpaidOTHER')  &&  document.getElementById('fieldcustomerpaidOTHER').checked){
+			fieldcustomerpaid="OTHER";
+		}
+		
+		var nonBankingFinclInst="";
+		if(document.getElementById('nonBankingFinclInstY')  &&  document.getElementById('nonBankingFinclInstY').checked){
+			nonBankingFinclInst="Y";
+		}else if(document.getElementById('nonBankingFinclInstN')  &&  document.getElementById('nonBankingFinclInstN').checked){
+			nonBankingFinclInst="N";
+		} else if(document.getElementById('nonBankingFinclInstNA')  &&  document.getElementById('nonBankingFinclInstNA').checked){
+			nonBankingFinclInst="NA";
+		}
+		
+		
+		
+		var parentShareType="";
+		if(document.getElementById('isParentPublTradedYes')  &&  document.getElementById('isParentPublTradedYes').checked){
+			parentShareType="Y";
+		}else if(document.getElementById('isParentPublTradedNo')  &&  document.getElementById('isParentPublTradedNo').checked){
+			parentShareType="N";
+		} else if(document.getElementById('isParentPublTradedNA')  &&  document.getElementById('isParentPublTradedNA').checked){
+			parentShareType="NA";
+		}
+		
+		var doesClientService="";
+		if(document.getElementById('doesClientServicesYes')  &&  document.getElementById('doesClientServicesYes').checked){
+			doesClientService="Y";
+		}else if(document.getElementById('doesClientServicesNo')  &&  document.getElementById('doesClientServicesNo').checked){
+			doesClientService="N";
+		} else if(document.getElementById('doesClientServicesNA')  &&  document.getElementById('doesClientServicesNA').checked){
+			doesClientService="NA";
+		}
+		
+		if(!(document.getElementById('fieldcustomerpaidOTHER')  &&  document.getElementById('fieldcustomerpaidOTHER').checked)){
+			resetDiveElements('customerPaidOther');
+		}
+		
+		if(!(document.getElementById('inventryVisiDuringVisitYes')  &&  document.getElementById('inventryVisiDuringVisitYes').checked)){
+			resetDiveElements('prodInvtryDesc');
+		}
+			
+		var custSicCode=$("#custSicCodeHidId").val();
+		if(custSicCode=="10"){
+			resetDiveElements('custSicLawId');
+		}else if(custSicCode=="18"){
+			resetDiveElements('amlReqDisplId');
+			resetDiveElements('custSicBankId');
+		}else{
+			resetDiveElements('amlReqDisplId');
+			resetDiveElements('custSicBankId');
+			resetDiveElements('custSicLawId');
+		}
+			
+		var inCorpDate=$("#inCorpDateHidId").val();
+		if(inCorpDate!="Y"){
+			resetDiveElements('incorporateId');
+		}
+		
+				
+		var eddJson = {
+				"cddControlNumber": parent.document.getElementById('cddControlNumber').value,
+				"country": parent.document.getElementById('country').value,
+				"custType": parent.document.getElementById('custType').value,
+				"clientType": parent.document.getElementById('clientType').value,
+				"cddType": parent.document.getElementById('cddType').value,
+				"formRiskRating": parent.document.getElementById('formRiskRating').value,
+				"businessLine": parent.document.getElementById('businessLine').value,
+				"spfFlag": parent.document.getElementById('spfFlag').value,
+				"formVersion": parent.document.getElementById('formVersion').value,
+				"isOverlapping": parent.document.getElementById('isOverlapping').value,
+				"custNumber": parent.document.getElementById('customerNumber').value,
+				"cddTriggerDate": parent.document.getElementById('cddTriggerDate').value,
+				"isCompanyProf": $("#companyInd").val(),
+				"isSalary": $("#salaryInd").val(),
+				"isInheritance": $("#inhertInd").val(),
+				"isInvestment": $("#investInd").val(),
+				"isOther": $("#otherInd").val(),
+
+				"objEddEntityDetailsVO": {
+					
+					"agreeWithExpectations": setRadioBTtoVO('customerAgreeWithExpectationYes','customerAgreeWithExpectationNo','',''),
+					"amlProgramReq": setRadioBTtoVO('amlPrgmRequiredYes','amlPrgmRequiredNo','amlReqDisplId',''),
+					"byWhatMethodCustPaid": fieldcustomerpaid,
+					"changeInClientBuss": setRadioBTtoVO('changeInClientBusiYes','changeInClientBusiNo','busiActChnDltsDispId',''),
+					"clientIssueBearerShare": setRadioBTtoVO('clntBearerShareYes','clntBearerShareNo','clntOSDtlsDispId',''),
+					"clientOsBearerShare": setRadioBTtoVO('clntOSBearerShareYes','clntOSBearerShareNo','',''),
+					"clientSubstDiscrp": setRadioBTtoVO('clientSubstDiscrYes','clientSubstDiscrNo','clntDiscrDtlsId',''),
+					"clntIndExpdToTerrFin": setRadioBTtoVO('clientIndExpdTerrYes','clientIndExpdTerrNo','',''),
+					"discussCustFinCrimCompl": setRadioBTtoVO('discussCustFinCrimComplYes','discussCustFinCrimComplNo','',''),
+					"doClntPractLawHighRisk": setRadioBTtoVO('clntPractlawHighRiskYes','clntPractlawHighRiskNo','',''),
+					"doesClientOtherFiRel":   setRadioBTtoVO('clntOtherFinanceRelYes','clntOtherFinanceRelNo','',''),
+					"doesClntUndstdFrdrisks": setRadioBTtoVO('doesclntUnderdFraudYes','doesclntUnderdFraudNo','',''),
+					"isClientDbaSpecial": setRadioBTtoVO('clientDBAorSplNmYes','clientDBAorSplNmNo','',''),
+					"isClientInterBussOnly": setRadioBTtoVO('isClntInterBusiOnlyYes','isClntInterBusiOnlyNo','interDtlsDisplId',''),
+					
+					"isClientSpv": setRadioBTtoVO('splPurposeVehicleYes','splPurposeVehicleNo','',''),
+					"isClientUseCitiaccGam":  setRadioBTtoVO('citiAcctCasinoTransYes','citiAcctCasinoTransNo','',''),
+					"isClientWritPolicyProc": setRadioBTtoVO('isClientWritProlicyProdYes','isClientWritProlicyProdNo','','writtenNoExplId'),
+					"isClntIndExpoToAmlRisk":  setRadioBTtoVO('isClintIndExpoRiskYes','isClintIndExpoRiskNo','',''),
+					"isClntListedCmpny": setRadioBTtoVO('isClientListedCompanyYes','isClientListedCompanyNo','',''),
+					"isCustContable": setRadioBTtoVO('fieldCustContactableYes','fieldCustContactableNo','',''),
+					"isCustPremOpenToPublic": setRadioBTtoVO('fieldCustPremOpenPublicYes','fieldCustPremOpenPublicNo','',''),
+					"isHomeBaseBuss":  setRadioBTtoVO('homeBasedBusiYes','homeBasedBusiNo','',''),
+					"isInvntryVisiblDuringVisit": setRadioBTtoVO('inventryVisiDuringVisitYes','inventryVisiDuringVisitNo','',''),
+					"isProcesIndepRevewChlng": setRadioBTtoVO('isProcessIndepRevewYes','isProcessIndepRevewNo','',''),
+					"lglFrmtnDocuments": setRadioBTtoVO('legalFormationDocYes','legalFormationDocNo','',''),
+					"isClientInvlGam": setRadioBTtoVO('isInternetGamblingBusYes','isInternetGamblingBusNo','',''),
+					"ownership3Years":  setRadioBTtoVO('isOwnership3YrsYes','isOwnership3YrsNo','ownerDtlsDispId',''),
+					"partOfTop200Law": setRadioBTtoVO('partTop200LawYes','partTop200LawNo','',''),
+					"shareType": setRadioBTtoVO('publiclyTradedYes','publiclyTradedNo','pubTradedDispId','clntPubTradedDispId'),
+					"prtShareType":parentShareType,
+					"doesClientServices":doesClientService,
+					"industryClassificationSystemNAIC":$("#industryClassificationSystemNAIC").val(),
+					
+					
+					"addScreeningRes":  $("#addScreeningResult").val(),
+					
+					"annlBussRevenue": $("#annualRevRetailHidId").val(),
+					"anyGovtAgencSubToOvrsigt":  $("#anyGovtAgencSubOver").val(),
+					"descOfBussOps": $("#descOfCustOrgnpo").val(),
+					"anyPvtSecWatchdogAccrOrg":  $("#anyPrivateSecWatchDog").val(),
+					"bussRevenueCcy":  $("#busiRevCurrency").val(),
+					
+					"callReportDtls": $("#callReportDtls").val(),
+					"callReportTxt": $("#callreportTxt").val(),
+					
+					"changeInClientBussDtls": $("#changeinClntBusiDtls").val(),
+					"clientAmlAudit": $("#clientAmlAudit").val(),
+					"clientAmlBussLines":  $("#clientAmlBusiLines").val(),
+					"clientAmlCddDtls":   $("#clientAmlCddDtls").val(),
+					"clientAmlComments": $("#clientAmlComments").val(),
+					"clientAmlNegNews": $("#clientAmlNegNews").val(),
+					"clientAmlProgram":  $("#clientAmlPrgm").val(),
+					"clientAmlTransMon": $("#clientAmlTransMonit").val(),
+					
+					"clientsReview": $("#clientsReview").val(),
+					
+					"clientSubstDiscrpDtls": $("#clientSubstDiscrDtls").val(),
+					
+					"cntctEmail": $("#fieldSowMemberEmail").val(),
+					"cntctFirstName": $("#fieldSowMemberFirstName").val(),
+					"cntctLastName": $("#fieldSowMemberLasttName").val(),
+					"cntctPosition": $("#fieldSowMemberPosition").val(),
+					"cntctTelphoneNum": $("#fieldSowMemberTelephoneNum").val(),
+					"countriesOfPrimOpers": countriesOfPrimOpers,
+					"custTrafficDesc": $("#custTRafficDescription").val(),
+					"dateOfVisit": $("#custDateOfVisit").val(),
+					
+					"doesClientHoldClientFund": $("#isClntHoldingFund").val(),
+					"exitingCountriesOps":existingCountryOPS,
+					"locVisit": $("#locationOfVisit").val(),
+					"mgmtRespContact": $("#mgmtRespContact").val(),
+					"mgmtRespContactDate": $("#mgmtRespContactDate").val(),
+					"mgmtRespTitle": $("#mgmtRespTitle").val(),
+					"natureOfBusiness": $("#natureOfBusi").val(),
+					"noOfEmployees":  $("#noOfEmployees").val(),
+					"noOfEmploysInPremises": $("#employsInPremis").val(),
+					"noOfLocation": $("#noOfLocations").val(),
+					"othrComments":  $("#custOherComments").val(),
+					
+					"ownership3YearsDtls": $("#ownership3YrsDtls").val(),
+					
+					"pctPublicShares": $("#percentPubShares").val(),
+					"placeAndDtOfIncorp": $("#fieldPlaceDateIncorp").val(),
+					"priPlaceOfBuss": priPlaceBusi,
+					"prodInvtryDesc": $("#prodInvtryDesc").val(),
+					"pubAvlChngInOwn": $("#pubAvlChngInOwn").val(),
+					"purpOfCustOrgNpo":$("#purposeOfCustomerOrg").val(),
+					"sdnBlackListRes": $("#sdnBlackList").val(),
+					"seedMoneyAmt": $("#seedMoneyAmt").val(),
+					"seedMoneyCcy":  $("#seedMoneyCurrency").val(),
+					"seedMoneySrc":  $("#seedMoneySources").val(),
+					"seeMoneyTiming": $("#seedMoneyTiming").val(),
+					
+					"sigRevAmt":  $("#signifRevenueAmt").val(),
+					"sigRevCcy":  $("#signifRevenueCur").val(),
+					"sigRevSrc":  $("#signifRevenueSrc").val(),
+					"sigRevTiming":  $("#signifRevenueTiming").val(),
+					"spaceOccupied": fieldSpaceOccupiedVal,
+					"sqrFootSpaceOccup": $("#fieldSqrFootSpaceOccupied").val(),
+					"stockExchName":  $("#stockExchName").val(),
+					"targetClientDesc":  $("#targetClientDesc").val(),
+					"ultParMjrStockExch": $("#parentStockExhNm").val(),
+					"verNum": $("#eddVerNum").val(),
+					"whatMeansFundCollectbyNpo": $("#meansforFundCollection").val(),
+					"whomVisited": $("#custWhomVisited").val(),
+					"writtenPoliciesNoExplain": $("#writtemPoliciesnoExplain").val(),
+// for mapping files
+					"legalEntities": isLegalEntitiesVal,
+					"noLegalDocs": legalDoscSep,
+					"noLegalDocList": legalDocsList,
+					"nonBankingFinclInst": nonBankingFinclInst,
+					"clnGovtOwnOrCtrl": setRadioBTtoVO('clnGovtOwnOrCtrlYes','clnGovtOwnOrCtrlNo','',''),
+					"sameOwnerShipFiveYrs": setRadioBTtoVO('sameOwnerShipFiveYrsYes','sameOwnerShipFiveYrsNo','',''),
+					"clntInCntryRestricted": setRadioBTtoVO('clntInCntryRestrictedYes','clntInCntryRestrictedNo','',''),
+					"entityEngaged": entitiesEngagedSep,
+					"compantExpDifficulties": setRadioBTtoVO('busiDifficultiesYes','busiDifficultiesNo','',''),
+					"companyDiffExplain": $("#compDiffiExplain").val(),
+					"customerPaidOther": $("#customerPaidOther").val(),
+										
+					"legalEntitiesLbqId": $("#legalEntitiesHidId").val(),
+					"noLegalDocsLbqId": $("#noLegalDocsHidId").val(),
+					"nonBankingFinclInstLbqId": $("#nonBankingFinclInstHidId").val(),
+					"clnGovtOwnOrCtrlLbqId": $("#clnGovtOwnOrCtrlHidId").val(),
+					"sameOwnerShipFiveYrsLbqId": $("#sameOwnerShipFiveYrsHidId").val(),
+					"clntInCntryRestrictedLbqId": $("#clntInCntryRestrictedHidId").val(),
+					"entityEngagedLbqId": $("#entityEngagedHidId").val(),
+					"compantExpDifficultiesLbqId": $("#compantExpDifficultiesHidId").val(),
+					"companyDiffExplainLbqId": $("#companyDiffExplainHidId").val(),
+					"customerPaidOtherLbqId": $("#customerPaidOtherHidId").val(),
+					
+					"legalEntitiesVerNum": $("#legalEntitiesVerNum").val(),
+					"noLegalDocsVerNum": $("#noLegalDocsVerNum").val(),
+					"nonBankingFinclInstVerNum": $("#nonBankingFinclInstVerNum").val(),
+					"clnGovtOwnOrCtrlVerNum": $("#clnGovtOwnOrCtrlVerNum").val(),
+					"sameOwnerShipFiveYrsVerNum": $("#sameOwnerShipFiveYrsVerNum").val(),
+					"clntInCntryRestrictedVerNum": $("#clntInCntryRestrictedVerNum").val(),
+					"entityEngagedVerNum": $("#entityEngagedVerNum").val(),
+					"compantExpDifficultiesVerNum": $("#compantExpDifficultiesVerNum").val(),
+					"companyDiffExplainVerNum": $("#companyDiffExplainVerNum").val(),
+					"customerPaidOtherVerNum": $("#customerPaidOtherVerNum").val(),
+					"dueDiligenceDtls": $("#dueDiligenceDetails").val(),
+					"dueDiligenceLbqId": $("#dueDiligenceHidId").val(),
+					"dueDiligenceVersionNum": $("#dueDiligenceVerNum").val()
+				},
+
+				"listEDDMemberVO":prepareMemberJson()
+				
+				
+		}
+		var eddversiono=$("#eddVerNum").val();
+		var jsonString = JSON.stringify(eddJson);
+		return jsonString;
+}
+
+function getEddIndividualJson(){
+	var employmentTypeId="";
+	if(document.getElementById('employmentTypeE') && document.getElementById('employmentTypeE').checked){
+		employmentTypeId="E";
+	}else if(document.getElementById('employmentTypeS') && document.getElementById('employmentTypeS').checked){
+		employmentTypeId="S";
+	}else if(document.getElementById('employmentTypeH') && document.getElementById('employmentTypeH').checked){
+		employmentTypeId="H";
+	}else if(document.getElementById('employmentTypeO') && document.getElementById('employmentTypeO').checked){
+		employmentTypeId="O";
+		
+	}
+	var otherEmploymentType=$("#emplOther").val();
+	var substanId="";
+	if(document.getElementById('isEmpSubDiscYes') && document.getElementById('isEmpSubDiscYes').checked) {
+		substanId="Y";
+	} else if(document.getElementById('isEmpSubDiscNo') && document.getElementById('isEmpSubDiscNo').checked) {
+		substanId="N";
+		resetDiveElements('empSubDetId');
+	}
+		var isClientCurEmpl="";
+	if(document.getElementById('isClientCurEmplYes') && document.getElementById('isClientCurEmplYes').checked) {
+		isClientCurEmpl="Y";
+	} else if(document.getElementById('isClientCurEmplNo') && document.getElementById('isClientCurEmplNo').checked) {
+		isClientCurEmpl="N";
+	}
+	var internetGamblingBuss="";
+	if(document.getElementById('internetGamblingBussYes') && document.getElementById('internetGamblingBussYes').checked) {
+		internetGamblingBuss="Y";
+	} else if(document.getElementById('internetGamblingBussNo') && document.getElementById('internetGamblingBussNo').checked) {
+		internetGamblingBuss="N";
+	}
+
+	var accountEmbFlgId="";
+	if(document.getElementById('accountEmbFlgYes') && document.getElementById('accountEmbFlgYes').checked) {
+		accountEmbFlgId="Y";
+	} else if(document.getElementById('accountEmbFlgNo') && document.getElementById('accountEmbFlgNo').checked) {
+		accountEmbFlgId="N";
+	}
+
+	var hnwClearFlag=$("#highNetWorthHidId").val();
+	if(hnwClearFlag!="Y"){
+		resetDiveElements('spfCorrobId');
+		deleteDocument();
+	}
+	
+		var	compBoFnStatements	= $("#compBoFnStatements").val();
+		var	compIndustryType	= $("#compIndustryType").val();
+		var	compInvestCountry	= $("#compInvestCountry").val();
+
+		var	compIcsPublicTradedBuss	= "";
+		if(document.getElementById('compIcsPublicTradedBussYes') && document.getElementById('compIcsPublicTradedBussYes').checked) {
+			compIcsPublicTradedBuss="Y";
+		} else if(document.getElementById('compIcsPublicTradedBussNo') && document.getElementById('compIcsPublicTradedBussNo').checked) {
+			compIcsPublicTradedBuss="N";
+		}
+		var	compPertWealcorroboration	= $("#compPertWealcorroboration").val();
+		var	compIsOtherOwner= "";
+		if(document.getElementById('compIsOtherOwnerYes') && document.getElementById('compIsOtherOwnerYes').checked) {
+			compIsOtherOwner="Y";
+			resetDiveElements('compPastOwner');
+		} else if(document.getElementById('compIsOtherOwnerNo') && document.getElementById('compIsOtherOwnerNo').checked) {
+			compIsOtherOwner="N";
+			resetDiveElements('compCurrentOwner');
+		}
+		var	compOtherCurrentOwnerLegalName	= $("#compOtherCurrentOwnerLegalName").val();
+		var	compPastOwnerLegalName	= $("#compPastOwnerLegalName").val();
+		var	compIsAnyBusinessInherited	= "";
+		if(document.getElementById('compIsAnyBusinessInheritedYes') && document.getElementById('compIsAnyBusinessInheritedYes').checked) {
+			compIsAnyBusinessInherited="Y";
+		} else if(document.getElementById('compIsAnyBusinessInheritedNo') && document.getElementById('compIsAnyBusinessInheritedNo').checked) {
+			compIsAnyBusinessInherited="N";
+			resetDiveElements('compInherDetDiv');
+		}
+		var	compGiftorFName	= $("#compGiftorFName").val();
+		var	compGiftorMName	= $("#compGiftorMName").val();
+		var	compGiftorLName	= $("#compGiftorLName").val();
+		var	compGgiftorRelationshipToClient	= $("#compGgiftorRelationshipToClient").val();
+		var	compGiftReceivedYr	= $("#compGiftReceivedYr").val();
+		var	compGiftValue	= $("#compGiftValue").val();
+		var	compApproxValCurrency	= $("#compApproxValCurrency").val();
+		var	compCreatorFName	= $("#compCreatorFName").val();
+		var	compCreatorMName	= $("#compCreatorMName").val();
+		var	compCreatorLName	= $("#compCreatorLName").val();
+		var	compBusFnStatements	= $("#compBusFnStatements").val();
+		var	compBusIsReputationSurrounding	= $("#compBusIsReputationSurrounding").val();
+		if(document.getElementById('compBusIsReputationSurroundingYes') && document.getElementById('compBusIsReputationSurroundingYes').checked) {
+			compBusIsReputationSurrounding="Y";
+		} else if(document.getElementById('compBusIsReputationSurroundingNo') && document.getElementById('compBusIsReputationSurroundingNo').checked) {
+			compBusIsReputationSurrounding="N";
+			resetDiveElements('compRepDescId');
+		}
+		var	compBusReputationIssueDesc	= $("#compBusReputationIssueDesc").val();
+		var	compBusWealActi	= $("#compBusWealActi").val();
+		
+		var	compBusNameBusiness	="";
+		var	compBusEmplyerName="";
+		if(compBusWealActi =="BO") {
+			compBusNameBusiness	= $("#compBusNameBusiness").val();
+			resetDiveElements('compEmpName');
+		} else if(compBusWealActi =="EMP") {
+			compBusEmplyerName=$("#compBusEmplyerName").val();
+			resetDiveElements('compBusiName');
+		}else{
+			resetDiveElements('compBusiName');
+			resetDiveElements('compEmpName');
+		}
+		
+		var	compBusCommencementDt	= $("#compBusCommencementDt").val();
+		var	compBusOrigInvAmt	= $("#compBusOrigInvAmt").val();
+		var	compOrigInvCurrency	= $("#compOrigInvCurrency").val();
+		var	compSrcOrigInv	= $("#compSrcOrigInv").val();
+		var	compBusiValue	= $("#compBusiValue").val();
+		var	compBusiValueCurrency	= $("#compBusiValueCurrency").val();
+		var	compValuationMethod	= $("#compValuationMethod").val();
+		var	compPictOwnership	= $("#compPictOwnership").val();
+
+		//Salary
+		var	salEmpName	= $("#salEmpName").val();
+		var	salIndustryType	= $("#salIndustryType").val();
+		var	salPoistionType	= $("#salPoistionType").val();
+		var	salBusAnnualPerIncome	= $("#salBusAnnualPerIncome").val();
+		var	salAnnualIncCurrency	= $("#salAnnualIncCurrency").val();
+		var	salValAccumulated	= $("#salValAccumulated").val();
+		var	salAccEqtCurrency	= $("#salAccEqtCurrency").val();
+		var	salFnStatements	= $("#salFnStatements").val();
+
+		// Inheritance
+		var	inhFnStatements	= $("#inhFnStatements").val();
+		var	inhGiftorFName	= $("#inhGiftorFName").val();
+		var	inhGiftorMName	= $("#inhGiftorMName").val();
+		var	inhGiftorLName	= $("#inhGiftorLName").val();
+		var	inhGgiftorRelationshipToClient	= $("#inhGgiftorRelationshipToClient").val();
+		
+		var	inhGiftReceivedYr	= $("#inhGiftReceivedYr").val();
+		var	inhGiftValue	= $("#inhGiftValue").val();
+		var	inhApproxValCurrency	= $("#inhApproxValCurrency").val();
+		var	inhBusIsReputationSurrounding= "";
+		if(document.getElementById('inhBusIsReputationSurroundingYes') && document.getElementById('inhBusIsReputationSurroundingYes').checked) {
+			inhBusIsReputationSurrounding="Y";
+		} else if(document.getElementById('inhBusIsReputationSurroundingNo') && document.getElementById('inhBusIsReputationSurroundingNo').checked) {
+			inhBusIsReputationSurrounding="N";
+			resetDiveElements('inhWealDescId');
+		}
+		var	inhBusReputationIssueDesc	= $("#inhBusReputationIssueDesc").val();
+		var	inhBusWealActi	= $("#inhBusWealActi").val();
+		if(inhBusWealActi =="BO") {
+			resetDiveElements('inhEmpName');
+		} else if(inhBusWealActi =="EMP") {
+			resetDiveElements('inhBusiName');
+		} else {
+			resetDiveElements('inhEmpName');
+			resetDiveElements('inhBusiName');
+		}
+		var	inhBusNameBusiness	= $("#inhBusNameBusiness").val();
+		var	inhBusEmplyerName	= $("#inhBusEmplyerName").val();
+
+		//Investments
+		var	sourceOfWealth	= $("#sourceOfWealth").val();
+		
+		var	invtSourceOfWealth	=$("#investSourceOfWealth").val();
+		if(invtSourceOfWealth =="INHERT") {
+			resetDiveElements('investDetailsDivId');
+			resetDiveElements('investPortDetlsDivId');
+		} else if(invtSourceOfWealth =="INVTRSTFND") {
+			resetDiveElements('investInhTId');
+			resetDiveElements('invstInhMemDetDiv');
+				var corroDocReset=$("#invstContrPort").val();
+				if(corroDocReset==""){
+					resetDiveElements('investPortDetlsDivId');
+				}
+		} else {
+			resetDiveElements('investDetailsDivId');
+			resetDiveElements('investInhTId');
+			resetDiveElements('invstInhMemDetDiv');
+			resetDiveElements('investPortDetlsDivId');
+		}
+		
+		var	invstIsAnyBusinessInherited	= "";
+		
+		if(document.getElementById('invstIsAnyBusinessInheritedYes') && document.getElementById('invstIsAnyBusinessInheritedYes').checked) {
+			invstIsAnyBusinessInherited="Y";
+		} else if(document.getElementById('invstIsAnyBusinessInheritedNo') && document.getElementById('invstIsAnyBusinessInheritedNo').checked) {
+			invstIsAnyBusinessInherited="N";
+			resetDiveElements('invstInhMemDetDiv');
+		}
+		
+		var	invstGgiftorRelationshipToClient	= $("#invstGgiftorRelationshipToClient").val();
+		var	invstGiftReceivedYr	= $("#invstGiftReceivedYr").val();
+		var	invstGiftValue	= $("#invstGiftValue").val();
+		var	invstApproxValCurrency	= $("#invstApproxValCurrency").val();
+		var	invstFnStatements	= $("#invstFnStatements").val();
+		var	invstBusIsReputationSurrounding	= "";
+		
+		if(document.getElementById('invstBusIsReputationSurroundingYes') && document.getElementById('invstBusIsReputationSurroundingYes').checked) {
+			invstBusIsReputationSurrounding="Y";
+		} else if(document.getElementById('invstBusIsReputationSurroundingNo') && document.getElementById('invstBusIsReputationSurroundingNo').checked) {
+			invstBusIsReputationSurrounding="N";
+			resetDiveElements('investRepDescId');
+		}
+		
+		
+		var	invstBusReputationIssueDesc	= $("#invstBusReputationIssueDesc").val();
+		var	invstBusWealActi	= $("#invstBusWealActi").val();
+		var	invstBusNameBusiness	= "";
+		var	invstBusEmplyerName	= "";
+		if(invstBusWealActi =="BO") {
+			invstBusNameBusiness= $("#invstBusNameBusiness").val();
+			resetDiveElements('invstEmpName');
+		} else  if(invstBusWealActi =="EMP") {
+			invstBusEmplyerName	= $("#invstBusEmplyerName").val();
+			resetDiveElements('invstBusiName');
+		} else {
+			resetDiveElements('invstBusiName');
+			resetDiveElements('invstEmpName');
+		}
+		
+		var	invstOrigInvCurrency	= $("#invstOrigInvCurrency").val();
+		var	invstBusCommencementDt	= $("#invstBusCommencementDt").val();
+		var	invstBusOrigInvAmt	= $("#invstBusOrigInvAmt").val();
+		var	invstOrigInvCurrency	= $("#invstOrigInvCurrency").val();
+		var	invstSrcOrigInv	= $("#invstSrcOrigInv").val();
+		var	invstValuationMethod	= $("#invstValuationMethod").val();
+
+		
+		var eddJson = {
+				"cddControlNumber": parent.document.getElementById('cddControlNumber').value,
+				"country": parent.document.getElementById('country').value,
+				"custType": parent.document.getElementById('custType').value,
+				"clientType": parent.document.getElementById('clientType').value,
+				"cddType": parent.document.getElementById('cddType').value,
+				"formRiskRating": parent.document.getElementById('formRiskRating').value,
+				"businessLine": parent.document.getElementById('businessLine').value,
+				"spfFlag": parent.document.getElementById('spfFlag').value,
+				"formVersion": parent.document.getElementById('formVersion').value,
+				"isOverlapping": parent.document.getElementById('isOverlapping').value,
+				"custNumber": parent.document.getElementById('customerNumber').value,
+				"cddTriggerDate": parent.document.getElementById('cddTriggerDate').value,
+				"isCompanyProf": $("#companyInd").val(),
+				"isSalary": $("#salaryInd").val(),
+				"isInheritance": $("#inhertInd").val(),
+				"isInvestment": $("#investInd").val(),
+				"isOther": $("#otherInd").val(),
+		
+				"objEddDetailsVO": {
+					"employerName": $("#employerName").val(),
+					"employerAddress1": $("#address1").val(),
+					"employerAddress2": $("#address2").val(),
+					"employerAddress3": $("#address3").val(),
+					"employerAddress4": $("#address4").val(),
+					"employerAddressCity": $("#empCity").val(),
+					"employerAddressState": $("#empState").val(),
+					"employerAddressPostalCode": $("#empPostalCd").val(),
+					"employerAddressCountry": $("#empCountry").val(),
+					"businessPhone": $("#empPhone").val(),
+					"businessWebsite": $("#empWebsite").val(),
+					"businessFax": $("#empFax").val(),
+					"businessEmail": $("#empEmail").val(),
+					"isCurrentlyEmployed": isClientCurEmpl,
+					"employmentType": employmentTypeId,
+					"otherEmploymentType": otherEmploymentType,
+					"isInternetGamblingBus": internetGamblingBuss,
+					"majorInvestmentCountry": $("#investCountry").val(),
+					"netWorthCurrency": $("#netWorCurrency").val(),	
+					"netWorthAmount": $("#netWorAmount").val(),
+					"assets": $("#assetVal").val(),	
+					"assetCurrency": $("#assetCurrency").val(),
+					"liabilities": $("#liabilities").val(),	
+					"liabilitiesCurrency": $("#liableCurrency").val(),	
+					"levelWealthCorrob": $("#pertWealcorroboration").val(),	
+					"corrobWealthDocType": $("#corrobWealthDocType").val(),
+					"corrobWealthDoc": $("#corroborationDoc").val(),
+					"srcCorrobWealth": $("#sourceWealthCorrob").val(),
+					"relationshipLength": $("#empRelLeng").val(),
+					"businessType": $("#indusType").val(),
+					"geographicLocation": $("#geoLocations").val(),
+					"subsetDiscrepancy": substanId,
+					"accountEmbassyBusiness": accountEmbFlgId,
+					"subsetDiscrepancyDetails": $("#empSubDet").val(),
+					"isHighNetworthCust": $("#highNetWorthHidId").val(),
+					"isSPF": $("#isSPFHidId").val(),
+					"eddVerNum": $("#eddVerNum").val(),
+					"attachmentId": $("#attachmentHidId").val()
+				},
+				"objEddSowVO": {},
+
+				"listEDDMemberVO":prepareMemberJson()
+}
+
+					if($('#CompanyProfitsID').attr('isChanged') == 'true') {
+						eddJson.objEddSowVO.objEddSowCompanyProfitsVO= {
+						"sourceOfWealthId": $("#compBaseSowId").val(),
+						"sowVerNum": $("#compBaseSowVer").val(),
+
+						"listKycSowBusinessVO":[{ 
+
+							"sowBusinessId": $("#compBusiSowBId").val(),
+							"verNum": $("#compBusiVer").val(),
+							"srcOfWlthMemId": $("#compBusiMemSowId").val(),
+							"memVerNum": $("#compBusiMemVer").val(),
+							"isFinStatementsAvailable":	compBoFnStatements,
+							"industryTypeCode":	compIndustryType,
+							"countryPrimaryOps":	compInvestCountry,
+							"countryDomicileInc": $("#compDomiCountry").val(),
+							"isClientPublic":	compIcsPublicTradedBuss,
+							"listOfMajorExchanges":	compPertWealcorroboration,
+							"isOthCurrOwnerAvl":	compIsOtherOwner,
+							"othCurrOwnerLglNm":	compOtherCurrentOwnerLegalName,
+							"pastOwnerLglNm":	compPastOwnerLegalName,
+							"isBusinessInheritance":	compIsAnyBusinessInherited,
+							"howGiftInhtWlthCreated": compBusWealActi,
+							"businessStartDt":	compBusCommencementDt,
+							"originalInvAmt":	compBusOrigInvAmt,
+							"originalInvCurrCode":	compOrigInvCurrency,
+							"sourceOriginalInv":	compSrcOrigInv,
+							"businessValue":	compBusiValue,
+							"businessValueCurrCode":	compBusiValueCurrency,
+							"businessHistory":	compValuationMethod,
+							"pctOwnership":	compPictOwnership
+						},
+						{
+							"sowBusinessId": $("#compBusiOwnSowBId").val(),
+							"verNum": $("#compBusiOwnVer").val(),
+							"srcOfWlthMemId": $("#compBusiOwnMemSowId").val(),
+							"memVerNum": $("#compBusiOwnMemVer").val(),
+							"memberLegalName": compBusNameBusiness
+						}
+						],
+										
+						"mapKycSowInheritanceVO":{
+							"CMPGIFTOR": [{
+							"sowInheritanceId": $("#compInhGifSowBId").val(),
+							"verNum": $("#compInhGifVer").val(),
+							"srcOfWlthMemId": $("#compInhGifMemSowId").val(),
+							"memVerNum": $("#compInhGifMemVer").val(),
+							"inheritanceWealth": compBusWealActi,
+							"memberFirstName":	compGiftorFName,
+							"memberMiddleName":	compGiftorMName,
+							"memberLastName":	compGiftorLName,
+							"inhtGiftCurrCd":	compApproxValCurrency,
+							"inhtGiftDt":	$("#compGiftReceivedYr").val(),
+							"inhtGiftRelnshp":	$("#compGgiftorRelationshipToClient").val(),
+							"inhtGiftValue":	$("#compGiftValue").val(),
+							"inhtWealthReputation":	compBusIsReputationSurrounding,
+							"inhtWealthReputationDetails":	compBusReputationIssueDesc,
+							"isFinStatementsAvailable":	$("#compBusFnStatements").val(),
+							"memberLegalName": compBusEmplyerName,
+							"memberType": "CMPGIFTOR"
+
+						}],
+						"CMPCREATOR": [{
+							"sowInheritanceId": $("#compInhCretSowBId").val(),
+							"verNum": $("#compInhCretVer").val(),
+							"srcOfWlthMemId": $("#compInhCretMemSowId").val(),
+							"memVerNum": $("#compInhCretMemVer").val(),
+							// "inheritanceWealth":	$("#compGiftReceivedYr").val(),
+							"memberFirstName":	compCreatorFName,
+							"memberMiddleName":	compCreatorMName,
+							"memberLastName":	compCreatorLName,
+							"memberType": "CMPCREATOR"
+						}]
+						},
+
+						"objKycSowEmployerVO": {
+							"sowEmployerId": $("#compEmpSowBId").val(),
+							"verNum": $("#compEmpVer").val(),
+							"srcOfWlthMemId": $("#compEmpMemSowId").val(),
+							"memVerNum": $("#compEmpMemVer").val(),
+							"memberLegalName": compBusEmplyerName,
+						}
+					}
+					}
+		
+
+		if($('#SalaryID').attr('isChanged') == 'true') {		
+		eddJson.objEddSowVO.objEddSowSalaryVO= {
+			"sourceOfWealthId": $("#salBaseSowId").val(),
+			"sowVerNum": $("#salBaseSowVer").val(),
+
+			"objKycSowEmployerVO":{
+
+				"sowEmployerId": $("#salEmpSowBId").val(),
+				"verNum": $("#salEmpVer").val(),
+				"srcOfWlthMemId": $("#salEmpMemSowId").val(),
+				"memVerNum": $("#salEmpMemVer").val(),
+
+				"memberLegalName":	salEmpName,
+				"industryTypeCode":	salIndustryType,
+				"employerPosition":	salPoistionType,
+				"employerStartDt": $("#salEmpStartDt").val(),
+				"employerEndDt": $("#salEmpEndDt").val(),
+				"annualIncome":	salBusAnnualPerIncome,
+				"annualIncomeCcy":	salAnnualIncCurrency,
+				"accEquity":	salValAccumulated,
+				"accEquityCurrCode":	salAccEqtCurrency,
+				"isFinStatementsAvailable":	salFnStatements
+			}
+
+		}
+}
+		
+if($('#InheritanceDivID').attr('isChanged') == 'true') {	
+		eddJson.objEddSowVO.objEddSowInheritanceVO= {
+			"sourceOfWealthId": $("#inheritBaseSowId").val(),
+			"sowVerNum": $("#inheritBaseSowVer").val(),
+			"objKycSowEmployerVO": {
+				"sowEmployerId": $("#inheritEmpSowBId").val(),
+				"verNum": $("#inheritEmpVer").val(),
+				"srcOfWlthMemId": $("#inheritEmpMemSowId").val(),
+				"memVerNum": $("#inheritEmpMemVer").val(),
+				"memberLegalName": inhBusEmplyerName
+			},
+			"objKycSowBusinessVO": {
+			"sowBusinessId": $("#inheritBusiOwnSowBId").val(),
+			"verNum": $("#inheritBusiOwnVer").val(),
+			"srcOfWlthMemId": $("#inheritBusiOwnMemSowId").val(),
+			"memVerNum": $("#inheritBusiOwnMemVer").val(),
+			"howGiftInhtWlthCreated": $("#inhBusWealActi").val(),
+			"memberLegalName": inhBusNameBusiness
+		},
+			"listKycSowInheritanceVO":[{
+				"sowInheritanceId": $("#inheritInhGifSowBId").val(),
+				"verNum": $("#inheritInhGifVer").val(),
+				"srcOfWlthMemId": $("#inheritInhGifMemSowId").val(),
+				"memVerNum": $("#inheritInhGifMemVer").val(),
+				"inheritanceWealth": $("#inhBusWealActi").val(),
+				"isFinStatementsAvailable":	inhFnStatements,
+				"memberFirstName":	inhGiftorFName,
+				"memberMiddleName":	inhGiftorMName,
+				"memberLastName":	inhGiftorLName,
+				"inhtGiftRelnshp":	inhGgiftorRelationshipToClient,
+				"inhtGiftDt":	inhGiftReceivedYr,
+				"inhtGiftValue":	inhGiftValue,
+				"inhtGiftCurrCd":	inhApproxValCurrency,
+				"inhtWealthReputation":	inhBusIsReputationSurrounding,
+				"inhtWealthReputationDetails": inhBusReputationIssueDesc
+			}]
+		}
+}
+		
+if($('#InvestmentsTrustsID').attr('isChanged') == 'true') {
+eddJson.objEddSowVO.objEddSowInvestmentVO= {
+			"sourceOfWealthId": $("#investBaseSowId").val(),
+			"sowVerNum": $("#investBaseSowVer").val(),
+
+			"objKycSowEmployerVO": {
+				"sowEmployerId": $("#investEmpSowBId").val(),
+				"verNum": $("#investEmpVer").val(),
+				"srcOfWlthMemId": $("#investEmpMemSowId").val(),
+				"memVerNum": $("#investEmpMemVer").val(),
+				"memberLegalName": $("#investBusEmplyerName").val()
+			},
+			"objKycSowInvestmentVO": {
+				"sowInvestmentId": $("#investIvtSowBId").val(),
+				"verNum": $("#investIvtVer").val(),
+				"srcOfWlthMemId": $("#investIvtMemSowId").val(),
+				"memVerNum": $("#investIvtMemVer").val(),
+				"investmentSourceOfWealth": $("#investSourceOfWealth").val(),
+				"isFinStatementsAvailable": $("#invstFnStatements").val(),
+				"reContribInvestPortfolio": $("#invstContrPort").val(),
+				"isBusinessInheritance": invstIsAnyBusinessInherited,
+				"inheritanceWealth": $("#invstBusWealActi").val(),
+				"investmentStartDt": invstBusCommencementDt,
+				"originalInvestAmt": invstBusOrigInvAmt,
+				"originalInvestCurrCode": invstOrigInvCurrency,
+				"origInvSourceFunds": invstSrcOrigInv,
+				"investHistory":$("#invstValuationMethod").val()
+			},
+			"listKycSowInheritanceVO":[{
+				"sowInheritanceId": $("#investInhGifSowBId").val(),
+				"verNum": $("#investInhGifVer").val(),
+				"srcOfWlthMemId": $("#investInhGifMemSowId").val(),
+				"memVerNum": $("#investInhGifMemVer").val(),
+				"isFinStatementsAvailable":	$("#invstInhFnStatements").val(),
+				"inheritanceWealth": $("#invstBusWealActi").val(),
+				"inhtGiftRelnshp":	invstGgiftorRelationshipToClient,
+				"inhtGiftDt":	invstGiftReceivedYr,
+				"inhtGiftValue":	invstGiftValue,
+				"inhtGiftCurrCd":	invstApproxValCurrency,
+				"inhtWealthReputation":	invstBusIsReputationSurrounding,
+				"inhtWealthReputationDetails":	invstBusReputationIssueDesc
+			}],
+			"objKycSowBusinessVO": {
+				"sowBusinessId": $("#investBusiOwnSowBId").val(),
+				"verNum": $("#investBusiOwnVer").val(),
+				"srcOfWlthMemId": $("#investBusiOwnMemSowId").val(),
+				"memVerNum": $("#investBusiOwnMemVer").val(),
+				"memberLegalName": $("#investBusNameBusiness").val(),
+			}
+		}
+}
+		
+if($('#OtherID').attr('isChanged') == 'true') {
+eddJson.objEddSowVO.objEddSowOtherTypeVO={
+			"sourceOfWealthId": $("#otherBaseSowId").val(),
+			"sowVerNum": $("#otherBaseSowVer").val(),
+			"enahancedSourceOfWealthDetails": $("#otherSourceOfWealth").val()
+		}
+}
+
+
+		var jsonString = JSON.stringify(eddJson);
+		alert(jsonString);
+		return jsonString;
+
+
+}
+
+function endYearValidation(currObject){
+	var	salEmpStartDtVal = $("#salEmpStartDt").val();
+	var	salEmpEndDtVal = $("#salEmpEndDt").val();
+	if ( salEmpEndDtVal != null && salEmpEndDtVal !="" && salEmpStartDtVal != null && salEmpStartDtVal !="") {
+		if (salEmpEndDtVal < salEmpStartDtVal) {
+			currObject.value = '';
+			currObject.onchange();
+		}
+	}
+}
+
+function startYearValidation(currObject){
+	var	salEmpStartDtVal = $("#salEmpStartDt").val();
+	var	salEmpEndDtVal = $("#salEmpEndDt").val();
+	if ( salEmpEndDtVal != null && salEmpEndDtVal !="" && salEmpStartDtVal != null && salEmpStartDtVal !="") {
+		if (salEmpEndDtVal < salEmpStartDtVal) {
+			currObject.value = '';
+			currObject.onchange();
+		}
+	}
+}
+function constructCmpMap(){
+	var mapCmpInh={};
+	mapCmpInh=mapCmpInh["CMPGIFTOR"] || [];
+	
+	//alert(mapCmpInh);
+	return addValueToKey(mapCmpInh,"CMPGIFTOR",prepareSowGiftorJson());
+}
+function addValueToKey(mapCmpInh,key, value) {
+   //var cmpInhMap={};
+	//mapCmpInh[key] = mapCmpInh[key] || [];
+	alert(value);
+	if(mapCmpInh[key]) {
+		alert(key);
+		var arr = []; arr.push(mapCmpInh[key]); arr.push(value); mapCmpInh[key]=arr;
+		} 
+	else{ 
+		alert(11);
+		mapCmpInh[key] = value;
+		}
+	//mapCmpInh[key]=value;
+	alert(mapCmpInh);
+	return mapCmpInh;
+	
+	//if(aMap[key]) { var arr = []; arr.push(aMap[key]); arr.push(value); aMap[key]=arr; } else{ aMap[key] = value; }
+}
+function prepareSowGiftorJson(){
+	var postData=[];
+	var data={};
+	data.sowInheritanceId= $("#compInhGifSowBId").val();
+	data.verNum= $("#compInhGifVer").val(),
+	data.srcOfWlthMemId= $("#compInhGifMemSowId").val(),
+	data.memVerNum=$("#compInhGifMemVer").val();
+	//data.inheritanceWealth": compBusWealActi,
+	data.memberFirstName=	$("#compGiftorMName").val();
+	data.memberMiddleName=	$("#compGiftorLName").val();
+	data.memberLastName=	$("#compInhGifSowBId").val();
+	data.inhtGiftCurrCd=	$("#compApproxValCurrency").val();
+	data.inhtGiftDt=	$("#compGiftReceivedYr").val();
+	data.inhtGiftRelnshp=	$("#compGgiftorRelationshipToClient").val();
+	data.inhtGiftValue=	$("#compGiftValue").val();
+	//"inhtWealthReputation":	compBusIsReputationSurrounding,
+	//"inhtWealthReputationDetails":	compBusReputationIssueDesc,
+	//data.isFinStatementsAvailable=	$("#compBusFnStatements").val(),
+	data.memberLegalName= compBusEmplyerName;
+	data.memberType= "CMPGIFTOR";
+	alert(data);
+	postData.push(data);
+	return postData;
+	
+}
+function prepareSowCreatorJson(){
+	
+}
+function prepareMemberJson(){
+	
+	var postData = [];
+	var loopingLength = $("#memberSize").val();
+	
+	for(var i = 0; i<loopingLength; i++) {
+		var data={};
+		//var corrobWealthSrcTypes+i = [];
+		
+		var corrobWealthSrcTypes=[];
+		var levelWealth=$("#levelWealthCorrob"+i).val();
+		if(levelWealth=="0" || levelWealth==""){
+			var identAttchId=$("#identificationMemberId"+i).val();	
+			resetDiveElements('corrobWealthDocTypeId'+i);
+			//resetDiveElements('corrobWealthId'+i);
+			//deleteDocumentOfUboMem(identAttchId,i);
+			hiddenDeleteDocumentOfUboMem(identAttchId,i);
+		}else{
+				if ($("#corrobWealthSrcTypes"+i)) {
+					$("#corrobWealthSrcTypes"+i+" option").each(function(index,element){
+						corrobWealthSrcTypes.push($(element).val());
+					});
+				}
+			}
+		var exitingCorrobDocType=[];
+		if ($("#uboExistingCorrob"+i)) {
+			$("#uboExistingCorrob"+i).each(function(index,element){
+				exitingCorrobDocType.push($(element).val());
+			 });
+		}
+		//resetDiveElements('corrobWealthId'+i);
+		var sourceOfWealthTypes=[];
+		if ($("#sourceOfWealthTypes"+i)) {
+			$("#sourceOfWealthTypes"+i+" option").each(function(index,element){
+				sourceOfWealthTypes.push($(element).val());
+			 });
+		}
+		var exitingSOWType=[];
+		if ($("#uboExistingSOW"+i)) {
+			$("#uboExistingSOW"+i).each(function(index,element){
+				exitingSOWType.push($(element).val());
+			 });
+		}
+		
+		data.idCountry = $("#govtIdNbr"+i).val();
+		data.controlNbr = $("#cddControlNumber").val();
+		data.customerNbr = $("#customerNumber").val();
+		data.cntryCde = $("#country"+i).val();
+		data.updateFlag = "Y";
+		//data.idType = "IC";
+		data.memberId = $("#identificationMemberId"+i).val();
+		data.memberRole = $("#identificationMemberRole"+i).val();
+		data.firstName = $("#firstName"+i).val();
+		data.suppCardExists = $("#suppCardExists"+i).val();
+		data.middleName = $("#middleName"+i).val();
+		data.idNumber = $("#idNumber"+i).val();
+		data.lastName = $("#lastName"+i).val();
+		data.idType = $("#idType"+i).val();
+		data.cddIdType = $("#cddIdType"+i).val();
+		data.associationtoClient =  $("#associationToClient"+i).val();
+		data.dateOfBirth = $("#dateOfBirth"+i).val();
+		data.addressLine1 = $("#addressLine1"+i).val();
+		data.addressLine2 = $("#addressLine2"+i).val();
+		data.addressLine3 = $("#addressLine3"+i).val();
+		data.addressLine4 = $("#addressLine4"+i).val();
+		data.primaryState = $("#primaryState"+i).val();
+		data.primaryCountry = $("#primaryCountry"+i).val();
+		data.cddPhotoIdType = $("#cddPhotoIdType"+i).val();
+		data.idVerfMeans =$("#idVerfMeans"+i).val();
+		data.primaryCity =$("#primaryCity"+i).val();
+		data.memberUBOId =$("#memberUBOId"+i).val();
+		data.levelWealthCorrob =$("#levelWealthCorrob"+i).val();
+		data.corrobWealthSrc =$("#corrobWealthSrc"+i).val();
+		data.corrobWealthSrcTypes=corrobWealthSrcTypes;
+		data.existingCorrobSrcWealth=exitingCorrobDocType;/*$("#uboExistingCorrob"+i).val()*/
+		data.corrobWealth =$("#corrobWealth"+i).val();
+		data.sourceOfWealthTypes=sourceOfWealthTypes;
+		data.existingSourceOfWealth=exitingSOWType;
+		data.downlDocsId =$("#downlDocsId"+i).val();
+		data.srcOfWlthCorrob =$("#srcOfWlthCorrob"+i).val();
+		data.retailSow =$("#retailSow"+i).val();
+		data.isUBO =$("#isUBO"+i).val();
+		data.memberUBOId=$("#memberUboId"+i).val();
+		data.memberUboVerNum=$("#memberUboVer"+i).val();
+		
+		postData.push(data);
+	}
+	
+	return postData; 
+	
+}
+function getUIValues(){
+	$.ajax({
+		type: "POST",
+        contentType: "application/json",
+        url: "edd/getUIValues",
+        dataType: 'json',
+        async : false,
+        timeout: 600000,
+        success: function(response) {
+        	
+        	empStartYearValMsg =  response.objEddSowVO.objEddSowSalaryVO.empStartYearValMsg;
+        	empEndYearValMsg = response.objEddSowVO.objEddSowSalaryVO.empEndYearValMsg;
+        }
+	});
+}
+$( "#topFiveCustomersDialog").dialog({
+	autoOpen: false,
+    resizable: false,
+    height: 280,
+    width: 700,
+    modal: true
+});
+
+function addTopFiveCustomers(mapTypeVar) {
+showPopupLoader();
+var furl="edd/addTopFiveCustomers?countryCode="+parent.document.getElementById('country').value
+		+"&controlNumber="+parent.document.getElementById('cddControlNumber').value
+		+"&custNumber="+parent.document.getElementById('customerNumber').value
+		+"&businessLine="+parent.document.getElementById('businessLine').value
+		+"&custType="+parent.document.getElementById('clientType').value
+		+"&riskRating="+parent.document.getElementById('formRiskRating').value
+		+"&formVersion="+parent.document.getElementById('formVersion').value
+		+"&cddType="+parent.document.getElementById('cddType').value
+		+"&mapType="+mapTypeVar;
+$("#topFiveCustomersDialog").load(furl);
+$("#topFiveCustomersDialog").dialog("open");
+}
+function afterAddTopFiveCustomers() {
+getTopFiveCustomersDataTable();
+showHideCustomerDetailsDatatableInbuiltPagination();
+closePopupLoader();
+}
+function openTopFiveCustomersPopup(lbqMapId) {
+showPopupLoader();
+var furl="edd/editTopFiveCustomer?countryCode="+parent.document.getElementById('country').value
+		+"&controlNumber="+parent.document.getElementById('cddControlNumber').value
+		+"&custNumber="+parent.document.getElementById('customerNumber').value
+		+"&businessLine="+parent.document.getElementById('businessLine').value
+		+"&custType="+parent.document.getElementById('clientType').value
+		+"&riskRating="+parent.document.getElementById('formRiskRating').value
+		+"&formVersion="+parent.document.getElementById('formVersion').value
+		+"&cddType="+parent.document.getElementById('cddType').value
+		+"&lbqMapId="+lbqMapId;
+$("#topFiveCustomersDialog").load(furl);
+$("#topFiveCustomersDialog").dialog("open");
+}
+var DeletedTopFiveCustomerCheckboxMap={};
+function updateDeletedCustomerMap(currObj,lbqMapId){
+	var checkedValue = (currObj.checked)?"Y":"N";
+	if(checkedValue == 'N') {
+		if(document.getElementById("top5CustomerDetailSelectAll")){
+			document.getElementById("top5CustomerDetailSelectAll").checked=false;
+		}
+	}
+	if(DeletedTopFiveCustomerCheckboxMap[lbqMapId]==checkedValue){
+		return;
+	}
+	DeletedTopFiveCustomerCheckboxMap[lbqMapId]=checkedValue;
+}
+var DeletedTopFiveSuppCheckboxMap={};
+function updateDeletedSuppMap(currObj,lbqMapId){
+	var checkedValue = (currObj.checked)?"Y":"N";
+	if(DeletedTopFiveSuppCheckboxMap[lbqMapId]==checkedValue){
+		return;
+	}
+	DeletedTopFiveSuppCheckboxMap[lbqMapId]=checkedValue;
+}
+var DeletedDonorCheckboxMap={};
+function updateDeletedDonorMap(currObj,lbqMapId){
+	var checkedValue = (currObj.checked)?"Y":"N";
+	if(DeletedDonorCheckboxMap[lbqMapId]==checkedValue){
+		return;
+	}
+	DeletedDonorCheckboxMap[lbqMapId]=checkedValue;
+}
+function deleteTopFiveCustomers(mapTypeDelVal){
+$('#mapTypeHidValue').val(mapTypeDelVal);
+var deleteMsg="";
+if(mapTypeDelVal=="CUST"){
+	deleteMsg=$("#deleteCustSuccMsgId").val();
+}else if(mapTypeDelVal=="SUPP"){
+	deleteMsg=$("#deleteSupplSuccMsgId").val();
+}else if(mapTypeDelVal=="DONOR"){
+	deleteMsg=$("#deleteDonorSuccMsgId").val();
+}
+var furl="edd/deleteTopFiveCustomers";
+var deletedTopFiveCustomersIds="";
+if(mapTypeDelVal=="CUST"){
+	for(var key in DeletedTopFiveCustomerCheckboxMap) {
+		if (DeletedTopFiveCustomerCheckboxMap.hasOwnProperty(key)) {
+			if(DeletedTopFiveCustomerCheckboxMap[key]=='Y') {
+				if(deletedTopFiveCustomersIds.trim()=='') {
+					deletedTopFiveCustomersIds=key;
+				} else {
+					deletedTopFiveCustomersIds=deletedTopFiveCustomersIds+"~"+key;
+				}
+			}
+		}
+	}
+}else if(mapTypeDelVal=="SUPP"){
+	for(var key in DeletedTopFiveSuppCheckboxMap) {
+		if (DeletedTopFiveSuppCheckboxMap.hasOwnProperty(key)) {
+			if(DeletedTopFiveSuppCheckboxMap[key]=='Y') {
+				if(deletedTopFiveCustomersIds.trim()=='') {
+					deletedTopFiveCustomersIds=key;
+				} else {
+					deletedTopFiveCustomersIds=deletedTopFiveCustomersIds+"~"+key;
+				}
+			}
+		}
+	}
+}else if(mapTypeDelVal=="DONOR"){
+	for(var key in DeletedDonorCheckboxMap) {
+		if (DeletedDonorCheckboxMap.hasOwnProperty(key)) {
+			if(DeletedDonorCheckboxMap[key]=='Y') {
+				if(deletedTopFiveCustomersIds.trim()=='') {
+					deletedTopFiveCustomersIds=key;
+				} else {
+					deletedTopFiveCustomersIds=deletedTopFiveCustomersIds+"~"+key;
+				}
+			}
+		}
+	}
+}
+
+if(deletedTopFiveCustomersIds == "") {
+	var wrnMsg = "";
+	if(mapTypeDelVal=="CUST"){
+		wrnMsg=$("#deleteCustSelMsgId").val();
+		if(wrnMsg == "") {
+			wrnMsg="Please select atleast one Customer to delete.";
+		}
+	}else if(mapTypeDelVal=="SUPP"){
+		wrnMsg=$("#deleteSupplSelMsgId").val();
+		if(wrnMsg == "") {
+			wrnMsg="Please select atleast one Supplier to delete.";
+		}
+	}else if(mapTypeDelVal=="DONOR"){
+		wrnMsg=$("#deleteDonorSelMsgId").val();
+		if(wrnMsg == "") {
+			wrnMsg="Please select atleast one Donor to delete.";
+		}
+	}
+	alert(wrnMsg);
+} else {
+	if (confirm(deleteMsg) == true) {
+		var dataParams="deletedTopFiveCustomersIds=" + deletedTopFiveCustomersIds+"&countryCode="+parent.document.getElementById('country').value
+		+"&controlNumber="+parent.document.getElementById('cddControlNumber').value;
+		showPopupLoader();
+		$.ajax({
+			type : "POST",
+			url : furl,
+			data : dataParams,
+			async : false,
+			success : afterDeleteTopFiveCustomers,
+			error : commonError
+		});
+	} else {
+		return;
+	}
+}
+}
+function afterDeleteTopFiveCustomers() {
+	var mapTypeHidValue=$("#mapTypeHidValue").val();
+	var deleteSuccessMsg="";
+	if(mapTypeHidValue=="CUST"){
+		getTopFiveCustomersDataTable();
+		showHideCustomerDetailsDatatableInbuiltPagination();
+		DeletedTopFiveCustomerCheckboxMap={};
+		deleteSuccessMsg=$("#deleteCustSuccessMsgId").val();
+		if(deleteSuccessMsg == "") {
+			deleteSuccessMsg="Customer(s) is Deleted Successfully";
+		}
+	}
+	if(mapTypeHidValue=="SUPP"){
+		getTopFiveSuppliersDataTable();
+		showHideSupplierDetailsDatatableInbuiltPagination();
+		DeletedTopFiveSuppCheckboxMap={};
+		deleteSuccessMsg=$("#deleteSupplSuccessMsgId").val();
+		if(deleteSuccessMsg == "") {
+			deleteSuccessMsg="Supplier(s) is Deleted Successfully";
+		}
+	}
+	if(mapTypeHidValue=="DONOR"){
+		parentDonorDetailsDatatableRefresh();
+		deleteSuccessMsg=$("#deleteDonorSuccessMsgId").val();
+		if(deleteSuccessMsg == "") {
+			deleteSuccessMsg="Donor(s) is Deleted Successfully";
+		}
+	}
+	alert(deleteSuccessMsg);
+	closePopupLoader();
+	if(document.getElementById("successMsgDiv")) {
+		document.getElementById("successMsgDiv").style.display = "none";
+	}
+}
+function showHideCustomerDetailsDatatableInbuiltPagination(){
+if(document.getElementById('top5CustomerDetailTable_filter')) {
+	document.getElementById('top5CustomerDetailTable_filter').style.display = 'none';
+}
+if(document.getElementById('top5CustomerDetailTable_length')) {
+	document.getElementById('top5CustomerDetailTable_length').style.display = 'none';
+}
+if(document.getElementById('top5CustomerDetailTable_paginate')) {
+	document.getElementById('top5CustomerDetailTable_paginate').style.display = 'none';
+}
+if(document.getElementById('top5CustomerDetailTable_info')) {
+	document.getElementById('top5CustomerDetailTable_info').style.display = 'none';
+}
+closePopupLoader();
+}
+function parentTopFiveCustomerDetailsDatatableRefresh(loadMapType){
+	if(loadMapType=="TOP_5_CUST"){
+		getTopFiveCustomersDataTable();
+		showHideCustomerDetailsDatatableInbuiltPagination();
+		DeletedTopFiveCustomerCheckboxMap={};
+	}
+	if(loadMapType=="TOP_5_SUPP"){
+		getTopFiveSuppliersDataTable();
+		showHideSupplierDetailsDatatableInbuiltPagination();
+		DeletedTopFiveSuppCheckboxMap={};
+	}
+	if(loadMapType=="DONOR"){
+		getDonorDetailsDataTable();
+		showHideDonorDetailsDatatableInbuiltPagination();
+		DeletedDonorCheckboxMap={};
+	}
+}	
+function ajaxTopFiveCustomersSuccessMsg(successMapType) {
+var dataParams;
+var successUrl="edd/getTopFiveCustomersSuccessMsg?mapType="+successMapType;
+$.ajax({
+	type : "POST",
+	url : successUrl,
+	data : dataParams,
+	cache : false,
+	async : true,
+	success : afterTopFiveCustomersSuccessMsg,
+	error : commonError
+});
+}
+function afterTopFiveCustomersSuccessMsg(respTxt){
+if(respTxt && respTxt.trim() !=' ') {
+	if(document.getElementById("successMsgDiv")) {
+		document.getElementById("successMsgDiv").style.display = "";
+		document.getElementById("successMsgDiv").innerHTML=respTxt.trim();
+	}
+}
+}
+function selectAllTopFiveCustomers(currObj){
+var checkedValue = (currObj.checked)?"Y":"N";
+$('.topFiveCustomerIndvCheckbox').each(function(index, obj){
+	if(checkedValue == 'Y') {
+		obj.checked=true;
+		updateDeletedCustomerMap(obj,obj.id);
+	} else {
+		obj.checked=false;
+	}
+});
+if(checkedValue == 'N') {
+	DeletedTopFiveCustomerCheckboxMap={};
+}
+}
+
+function getTopFiveCustomersDataTable(){
+var customerMapType="TOP_5_CUST";
+var initUrl="edd/getTopFiveCustSuppliers?countryCode="+parent.document.getElementById('country').value
+			+"&controlNumber="+parent.document.getElementById('cddControlNumber').value
+			+"&customerNumber="+parent.document.getElementById('custNumber').value
+			+"&mapType="+customerMapType;
+if(document.getElementById("top5CustomerDetailSelectAll")){
+	document.getElementById("top5CustomerDetailSelectAll").checked=false;
+}
+  customerTable = $('#top5CustomerDetailTable').DataTable({
+	  "initComplete": function(settings, json){
+		  if (isFormReadonly('EDD') != 'Y') {
+		  if(customerTable.data().count()==5){
+			  document.getElementById("btnAddTopCustomer").disabled=true;
+			  document.getElementById("btnAddTopCustomer").className='bbuttonDisabled';
+			  document.getElementById("btnDeleteTopCustomer").disabled=false;
+			  document.getElementById("btnDeleteTopCustomer").className='bbutton'; 
+		  }
+		  else if(customerTable.data().count()<5){
+			  document.getElementById("btnAddTopCustomer").disabled=false;
+			  document.getElementById("btnAddTopCustomer").className='bbutton'; 
+			  document.getElementById("btnDeleteTopCustomer").disabled=false;
+			  document.getElementById("btnDeleteTopCustomer").className='bbutton'; 
+		  }
+		  else if(customerTable.data().count()>0){
+			  document.getElementById("btnAddTopCustomer").disabled=false;
+			  document.getElementById("btnAddTopCustomer").className='bbutton'; 
+			  document.getElementById("btnDeleteTopCustomer").disabled=false;
+			  document.getElementById("btnDeleteTopCustomer").className='bbutton';
+		  }
+		  else  if(customerTable.data().count()<1){
+			  document.getElementById("btnDeleteTopCustomer").disabled=true;
+			  document.getElementById("btnDeleteTopCustomer").className='bbuttonDisabled';
+			  document.getElementById("btnAddTopCustomer").disabled=false;
+			  document.getElementById("btnAddTopCustomer").className='bbutton'; 
+		  }
+		  }
+	  },
+	  destroy: true,
+	  "sAjaxSource"	: initUrl,
+	  "bFilter"	  	: true,
+	  "pageLength" 	: 1000,
+	  "sAjaxDataProp": "",
+	  "render": function( mData, type, row ){},
+	  "order"		: [[ 0, "asc" ]],
+	  aoColumns 	: [
+						{
+							mData:   "lbqMapId",
+						     render: function ( mData, type, row ) {
+						       if ( type === 'display' ) {
+						    		   var onclickFun = "updateDeletedCustomerMap(this,'"+row.lbqMapId+"')";
+						    	   	   return "<input type='checkbox' id=topFiveCustSelectedId"+row.lbqMapId+" name=topFiveCustSelectedId"+row.lbqMapId+" onclick="+onclickFun+">";
+						        }
+						        return mData;
+						    },
+						},
+	             	   { "mData": "mapTypeDesc"},
+	             	   { "mData": "entityName"},
+	             	   { "mData": "firstName"},
+	             	   { "mData": "midName"},
+	             	   { "mData": "lastName"},
+	             	   {
+							mData:   "lbqMapId",
+						     render: function ( mData, type, row ) {
+						       if ( type === 'display' ) {
+						    	   var onclickFun = "openTopFiveCustomersPopup('"+row.lbqMapId+"')";
+						    	   if(row.mapVal==null || row.mapVal==""){
+						    		   return "<a href=javascript: style='border: #ff6666 solid 2px;' class=bbutton id=addCustDetailsBtn"+row.lbqMapId+"  name=addCustDetailsBtn"+row.lbqMapId+"  onclick="+onclickFun+">View/Edit</a>";
+						    	   }else if("E"==row.mapVal && (row.entityName==null || row.entityName=="" || row.ctry==null || row.ctry=="")){
+						    		   return "<a href=javascript: style='border: #ff6666 solid 2px;' class=bbutton id=addCustDetailsBtn"+row.lbqMapId+"  name=addCustDetailsBtn"+row.lbqMapId+"  onclick="+onclickFun+">View/Edit</a>";
+						    	   }else if("I"==row.mapVal && (row.firstName==null || row.firstName=="" || row.lastName==null || row.lastName=="" || row.ctry==null || row.ctry=="")){
+						    		   return "<a href=javascript: style='border: #ff6666 solid 2px;' class=bbutton id=addCustDetailsBtn"+row.lbqMapId+"  name=addCustDetailsBtn"+row.lbqMapId+"  onclick="+onclickFun+">View/Edit</a>";
+						    	   }
+						    	   else{
+						    		   return "<a href=javascript: class=bbutton id=addCustDetailsBtn"+row.lbqMapId+"  name=addCustDetailsBtn"+row.lbqMapId+"  onclick="+onclickFun+">View/Edit</a>";
+						    	   }
+						        }
+						        return mData;
+						    },
+						},
+					]
+		});
+}
+
+//Added for Suppliers
+
+function getTopFiveSuppliersDataTable(){
+var customerMapType="TOP_5_SUPP";
+var initUrl="edd/getTopFiveCustSuppliers?countryCode="+parent.document.getElementById('country').value
+			+"&controlNumber="+parent.document.getElementById('cddControlNumber').value
+			+"&customerNumber="+parent.document.getElementById('custNumber').value
+			+"&mapType="+customerMapType;
+if(document.getElementById("top5CustomerDetailSelectAll")){
+	document.getElementById("top5CustomerDetailSelectAll").checked=false;
+}
+supplierTable = $('#top5SupplierDetailTable').DataTable({
+	  "initComplete": function(settings,json){
+		  if (isFormReadonly('EDD') != 'Y') {
+		  if(supplierTable.data().count()==5){
+			  document.getElementById("btnAddTopSupplier").disabled=true;
+			  document.getElementById("btnAddTopSupplier").className='bbuttonDisabled';
+			  document.getElementById("btnDeleteTopSupplier").disabled=false;
+			  document.getElementById("btnDeleteTopSupplier").className='bbutton'; 
+		  }
+		  else if(supplierTable.data().count()<5){
+			  document.getElementById("btnAddTopSupplier").disabled=false;
+			  document.getElementById("btnAddTopSupplier").className='bbutton'; 
+			  document.getElementById("btnDeleteTopSupplier").disabled=false;
+			  document.getElementById("btnDeleteTopSupplier").className='bbutton'; 
+		  }
+		  else if(supplierTable.data().count()>0){
+			  document.getElementById("btnAddTopSupplier").disabled=false;
+			  document.getElementById("btnAddTopSupplier").className='bbutton'; 
+			  document.getElementById("btnDeleteTopSupplier").disabled=false;
+			  document.getElementById("btnDeleteTopSupplier").className='bbutton';
+		  }
+		  else  if(supplierTable.data().count()<1){
+			  document.getElementById("btnDeleteTopSupplier").disabled=true;
+			  document.getElementById("btnDeleteTopSupplier").className='bbuttonDisabled';
+			  document.getElementById("btnAddTopSupplier").disabled=false;
+			  document.getElementById("btnAddTopSupplier").className='bbutton'; 
+		  }
+		  }
+	  },
+	  destroy: true,
+	  "sAjaxSource"	: initUrl,
+	  "bFilter"	  	: true,
+	  "pageLength" 	: 1000,
+	  "sAjaxDataProp": "",
+	  "render": function( mData, type, row ){},
+	  "order"		: [[ 0, "asc" ]],
+	  aoColumns 	: [
+						{
+							mData:   "lbqMapId",
+						     render: function ( mData, type, row ) {
+						       if ( type === 'display' ) {
+						    		   var onclickFun = "updateDeletedSuppMap(this,'"+row.lbqMapId+"')";
+						    	   	   return "<input type='checkbox' id=topFiveCustSelectedId"+row.lbqMapId+" name=topFiveCustSelectedId"+row.lbqMapId+" onclick="+onclickFun+">";
+						        }
+						        return mData;
+						    },
+						},
+	             	   { "mData": "mapTypeDesc"},
+	             	   { "mData": "entityName"},
+	             	   { "mData": "firstName"},
+	             	   { "mData": "midName"},
+	             	   { "mData": "lastName"},
+	             	   {
+	             		   mData:   "lbqMapId",
+						     render: function ( mData, type, row ) {						    	 
+						       if ( type === 'display' ) {
+						    	   var onclickFun = "openTopFiveCustomersPopup('"+row.lbqMapId+"')";
+						    	   if(row.mapVal==null || row.mapVal==""){
+						    		   return "<a href=javascript: style='border: #ff6666 solid 2px;' class=bbutton id=addCustDetailsBtn"+row.lbqMapId+"  name=addCustDetailsBtn"+row.lbqMapId+"  onclick="+onclickFun+">View/Edit</a>";
+						    	   }else if("E"==row.mapVal && (row.entityName==null || row.entityName=="" || row.ctry==null || row.ctry=="")){
+						    		   return "<a href=javascript: style='border: #ff6666 solid 2px;' class=bbutton id=addCustDetailsBtn"+row.lbqMapId+"  name=addCustDetailsBtn"+row.lbqMapId+"  onclick="+onclickFun+">View/Edit</a>";
+						    	   }else if("I"==row.mapVal && (row.firstName==null || row.firstName=="" || row.lastName==null || row.lastName=="" || row.ctry==null || row.ctry=="")){
+						    		   return "<a href=javascript: style='border: #ff6666 solid 2px;' class=bbutton id=addCustDetailsBtn"+row.lbqMapId+"  name=addCustDetailsBtn"+row.lbqMapId+"  onclick="+onclickFun+">View/Edit</a>";
+						    	   }
+						    	   else{
+						    		   return "<a href=javascript: class=bbutton id=addCustDetailsBtn"+row.lbqMapId+"  name=addCustDetailsBtn"+row.lbqMapId+"  onclick="+onclickFun+">View/Edit</a>";
+						    	   }
+						        }
+						        return mData;
+						    },
+						},
+					]
+		});
+}
+
+function showHideSupplierDetailsDatatableInbuiltPagination(){
+if(document.getElementById('top5SupplierDetailTable_filter')) {
+	document.getElementById('top5SupplierDetailTable_filter').style.display = 'none';
+}
+if(document.getElementById('top5SupplierDetailTable_length')) {
+	document.getElementById('top5SupplierDetailTable_length').style.display = 'none';
+}
+if(document.getElementById('top5SupplierDetailTable_paginate')) {
+	document.getElementById('top5SupplierDetailTable_paginate').style.display = 'none';
+}
+if(document.getElementById('top5SupplierDetailTable_info')) {
+	document.getElementById('top5SupplierDetailTable_info').style.display = 'none';
+}
+closePopupLoader();
+}
+
+
+function loadMemberIdNumber(memberIDType,memberIndexForIdNumber,memberId){
+	if(document.getElementById('memberIdType_'+memberId+'_'+memberIDType)) {
+		if(document.getElementById('idNumber'+memberIndexForIdNumber)){
+			document.getElementById('idNumber'+memberIndexForIdNumber).value = document.getElementById('memberIdType_'+memberId+'_'+memberIDType).value;
+		}
+	}
+}
+function loadCustIdNumber(custIDType,custMemberIndexForIdNumber){
+	if(document.getElementById('custIdType_'+custIDType)) {
+		if(document.getElementById('idNumber'+custMemberIndexForIdNumber)){
+			document.getElementById('idNumber'+custMemberIndexForIdNumber).value = document.getElementById('custIdType_'+custIDType).value;
+		}
+	}
+}
+
+function checkForMandBasedOnMaterialChange(currObject){
+	
+			if(currObject.value.trim()!='') {
+				currObject.style.borderColor="#cccccc";
+			} else {
+				currObject.style.borderColor="#ff0000";
+			}
+		//}
+}
+$( "#donorDetailsDialog").dialog({
+	autoOpen: false,
+    resizable: false,
+    height: 280,
+    width: 700,
+    modal: true
+});
+
+
+function parentDonorDetailsDatatableRefresh(){
+	getDonorDetailsDataTable();
+	showHideDonorDetailsDatatableInbuiltPagination();
+	DeletedDonorCheckboxMap={};
+}
+
+
+function showHideDonorDetailsDatatableInbuiltPagination(){
+	if(document.getElementById('donorDetailsTable_filter')) {
+		document.getElementById('donorDetailsTable_filter').style.display = 'none';
+	}
+	if(document.getElementById('donorDetailsTable_length')) {
+		document.getElementById('donorDetailsTable_length').style.display = 'none';
+	}
+	if(document.getElementById('donorDetailsTable_paginate')) {
+		document.getElementById('donorDetailsTable_paginate').style.display = 'none';
+	}
+	if(document.getElementById('donorDetailsTable_info')) {
+		document.getElementById('donorDetailsTable_info').style.display = 'none';
+	}
+	closePopupLoader();
+}
+
+function getDonorDetailsDataTable(){
+	var donorMapType="DONOR";
+	var initUrl="edd/getTopFiveCustSuppliers?countryCode="+parent.document.getElementById('country').value
+				+"&controlNumber="+parent.document.getElementById('cddControlNumber').value
+				+"&customerNumber="+parent.document.getElementById('custNumber').value
+				+"&mapType="+donorMapType;
+	
+	if(document.getElementById("top5CustomerDetailSelectAll")){
+		document.getElementById("top5CustomerDetailSelectAll").checked=false;
+	}
+	
+	  table = $('#donorDetailsTable').DataTable({
+		  destroy: true,
+		  "sAjaxSource"	: initUrl,
+		  "bFilter"	  	: true,
+		  "pageLength" 	: 1000,
+		  "sAjaxDataProp": "",
+		  "render": function( mData, type, row ){},
+		  "order"		: [[ 0, "asc" ]],
+		  aoColumns 	: [
+								{
+									mData:   "lbqMapId",
+								     render: function ( mData, type, row ) {
+								       if ( type === 'display' ) {
+								    		   var onclickFun = "updateDeletedDonorMap(this,'"+row.lbqMapId+"')";
+								    	   	   return "<input type='checkbox' id=topFiveCustSelectedId"+row.lbqMapId+" name=topFiveCustSelectedId"+row.lbqMapId+" onclick="+onclickFun+">";
+								        }
+								        return mData;
+								    },
+								},
+		             	   { "mData": "donorName"},
+		             	   { "mData": "fundsProvided"},
+		             	   { "mData": "cntryOfResidence"},
+		             	  {
+								mData:   "lbqMapId",
+							     render: function ( mData, type, row ) {
+							       if ( type === 'display' ) {
+							    	   var onclickFun = "openDonorDetailsDialog('"+row.lbqMapId+"')";
+							    	   return "<a href=javascript: class=bbutton id=addCustDetailsBtn"+row.lbqMapId+"  name=addCustDetailsBtn"+row.lbqMapId+"  onclick="+onclickFun+">View/Edit</a>";
+							        }
+							        return mData;
+							    },
+							},
+		             	  
+						]
+			});
+}
+
+function addDonorDetailsDialog() {
+	var donormapTye="DONOR";
+	var furl="edd/dialogPopUp?countryCode="+parent.document.getElementById('country').value
+			+"&controlNumber="+parent.document.getElementById('cddControlNumber').value
+			+"&custNumber="+parent.document.getElementById('customerNumber').value
+			+"&businessLine="+parent.document.getElementById('businessLine').value
+			+"&custType="+parent.document.getElementById('clientType').value
+			+"&riskRating="+parent.document.getElementById('formRiskRating').value
+			+"&formVersion="+parent.document.getElementById('formVersion').value
+			+"&cddType="+parent.document.getElementById('cddType').value
+			+"&mapType="+donormapTye;
+	$("#donorDetailsDialog").load(furl);
+    $("#donorDetailsDialog").dialog("open");
+}
+
+function openDonorDetailsDialog(lbqMapIdVal) {
+	var donormapTye="DONOR";
+	var furl="edd/editTopFiveCustomer?countryCode="+parent.document.getElementById('country').value
+			+"&controlNumber="+parent.document.getElementById('cddControlNumber').value
+			+"&custNumber="+parent.document.getElementById('customerNumber').value
+			+"&businessLine="+parent.document.getElementById('businessLine').value
+			+"&custType="+parent.document.getElementById('clientType').value
+			+"&riskRating="+parent.document.getElementById('formRiskRating').value
+			+"&formVersion="+parent.document.getElementById('formVersion').value
+			+"&cddType="+parent.document.getElementById('cddType').value
+			+"&lbqMapId="+lbqMapIdVal;
+	$("#donorDetailsDialog").load(furl);
+    $("#donorDetailsDialog").dialog("open");
+}
+
+function showClntPractHishRiskSection(){
+	var industryType = $("#industryClassificationSystemNAIC").val();
+	if(industryType =="18" || industryType =="19") {
+		$("#clientPracHishRiskId").show();
+	} else {
+		$("#clientPracHishRiskId").hide();
+		//document.getElementById("clntPractlawHighRiskYes").checked=false;
+		//document.getElementById("clntPractlawHighRiskNo").checked=false;
+	}
+}
+
+function showClntDueDiligenceSection(){
+	var industryType = $("#industryClassificationSystemNAIC").val();
+	for (var i = 0; i < dueDiligenceArr.length; i++) {
+        if (dueDiligenceArr[i] == industryType) {
+        	$("#clientDDTextId").show();
+        	$("#clientUploadId").show();
+        	break;
+        } else {
+        	$("#clientDDTextId").hide();
+        	$("#clientUploadId").hide();
+        }
+	}
+}
+
+function showClntServicesDueDiligenceSection(){
+	if(document.getElementById("doesClientServicesYes")!=null && document.getElementById("doesClientServicesYes").checked==true){
+       	$("#clientDDTextId").show();
+       	$("#clientUploadId").show();
+    } else {
+    	showClntDueDiligenceSection();
+    }
+}
+
+function checkNAICHasDueDiligenceValues(){
+	var industryType = $("#industryClassificationSystemNAIC").val();
+	var hasDueDiligenceValue = false;
+	
+	for (var i = 0; i < dueDiligenceArr.length; i++) {
+        if (dueDiligenceArr[i] == industryType) {
+        	hasDueDiligenceValue = true;
+        	break;
+        }
+	}
+	return hasDueDiligenceValue;
+}
