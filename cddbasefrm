@@ -1,0 +1,355 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
+<%@ taglib prefix="sec" uri="http://www.springframework.org/security/tags"%>
+<%@ page contentType="text/html; charset=UTF-8" %>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<head>
+	<script LANGUAGE="javascript" src="js/common/commonutil.js"></script>
+	<script LANGUAGE="javascript" src="js/cdd/cddBaseForm.js"></script>
+	<link rel="stylesheet" href="css/pagecontainer.css" type="text/css" />
+</head>
+<body>
+<div id="page-container">
+    <div>
+        <table class="GLDBWXGBK" style="left: 0px; top: 0px; width: 100%; height: 3.25%; position: relative;" bgcolor="#f2f2f2">
+            <tbody>
+                <tr>
+                    <td>
+                        <table cellspacing="0" cellpadding="0">
+                            <tbody>
+                                <tr>
+                                    <td style="vertical-align: top;">
+                                        <div class="GLDBWXGGQ" id="customerName">&nbsp;${cddBaseVO.custName}</div>
+                                    </td>
+                                    <td class="GLDBWXGNQ" style="vertical-align: middle;">&nbsp;&nbsp;&nbsp;${baseCddAttributeLables.CIF.label}:&nbsp;</td>
+                                    <td class="GLDBWXGCQ" style="vertical-align: middle;">${cddBaseVO.custNumber}</td>
+                                    <td class="GLDBWXGNQ" style="vertical-align: middle;">&nbsp;&nbsp;&nbsp;${baseCddAttributeLables.CONTROL_NO.label}:&nbsp;</td>
+                                    <td class="GLDBWXGCQ" style="vertical-align: middle;">${cddBaseVO.cddControlNumber}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                    <td align="right" style="vertical-align: bottom;">
+                        <table style="padding-right: 10px;" cellspacing="0" cellpadding="0">
+                            <tbody>
+                                <tr>
+                                	<td class="GLDBWXSNQ" align="left" style="vertical-align: middle;">&nbsp;&nbsp;&nbsp;${baseCddAttributeLables.AS_OF_DATE.label}:&nbsp;</td>
+                                	<td class="GLDBWXSCQ" align="left" style="vertical-align: middle;">${cddBaseVO.lastRefreshDate}&nbsp;&nbsp;&nbsp;</td>
+                                    <td align="left" style="vertical-align: top;" data-toggle="tooltip" data-placement="bottom" title="${baseCddAttributeLables.AUDIT_TOOL_TIP_MSG.label}"><img style="height: 30px;" id="idAuditLogView" src="images/imgHistory_10.PNG" onclick="openAuditLog();"></td>
+                                    <td align="left" style="vertical-align: top;" data-toggle="tooltip" data-placement="bottom" title="${baseCddAttributeLables.COMMENTS_TOOL_TIP_MSG.label}"><img style="height: 30px;" id="idKycComments" src="images/imgComments_10.PNG" onclick="openKycComments();"></td>
+                                    <sec:authorize access="hasAuthority('FUNCTION.CD.PRINT')">
+                    					<td align="left" style="vertical-align: top;" data-toggle="tooltip" data-placement="bottom" title="${baseCddAttributeLables.PRINT_TOOL_TIP_MSG.label}"><img style="height: 30px;" id="idPrint" src="images/imgPrint_10.PNG" onclick="print();"></td>
+                    				</sec:authorize>
+                    			</tr>
+                    		</tbody>
+                   		</table>
+                    </td>
+                </tr>
+                <tr>
+                    <td align="left" width="62%">
+                        <table cellspacing="0" cellpadding="0">
+                            <tbody>
+                                <tr>
+                                    <%-- <td style="vertical-align: top;">
+                                        <div class="GLDBWXGCQ">&nbsp;${cddBaseVO.businessLine}</div>
+                                    </td>
+                                    <td style="vertical-align: top;">
+                                        <div class="GLDBWXGCQ">&nbsp;&nbsp;${cddBaseVO.custType}</div>
+                                    </td> --%>
+                                    <td style="vertical-align: top;">
+                                        <div class="GLDBWXGCQ">&nbsp;${cddBaseVO.clientTypeDesc}</div>
+                                    </td>
+                                    <td style="vertical-align: top;word-wrap:break-word">
+                                        <div class="GLDBWXGNQ">&nbsp;&nbsp;&nbsp;${baseCddAttributeLables.RISK_RATING.label}:</div>
+                                    </td>
+                                    <td style="vertical-align: top;">
+                                        <div class="GLDBWXGCQ">&nbsp;${cddBaseVO.formRiskRating}/${cddBaseVO.custRiskRating}</div>
+                                    </td>
+                                    <td style="vertical-align: top;">
+                                        <div class="GLDBWXGNQ">&nbsp;&nbsp;&nbsp;${baseCddAttributeLables.STATUS.label} :</div>
+                                    </td>
+                                    <td style="vertical-align: top;">
+                                        <div class="GLDBWXGCQ">
+                                        	&nbsp;${cddBaseVO.cddStatus}
+                                        </div>
+                                    </td>
+                                    <c:if test="${cddBaseVO.isMigrated != 'Y'}">
+	                                    <td style="vertical-align: top;">
+	                                        <div class="GLDBWXGNQ">&nbsp;&nbsp;&nbsp;${baseCddAttributeLables.SPF.label} :</div>
+	                                    </td>
+	                                    <td style="vertical-align: top;">
+	                                        <div class="GLDBWXGCQ">&nbsp;${cddBaseVO.spfFlag}</div>
+	                                    </td>
+                                    </c:if>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                    <td align="right" width="38%">
+                    			<c:if test="${cddBaseVO.isReadOnly == 'Y' && cddBaseVO.isChecker == 'Y' && cddBaseVO.isObjected == 'Y'}">
+                                        <span class="GLDBWXSCQ">COMPLIANCE ADVISEMENT - OBJECTION</span>&nbsp;&nbsp;&nbsp;
+		                     	</c:if>
+		                     	<c:if test="${cddBaseVO.isReadOnly == 'Y' && cddBaseVO.isChecker == 'Y' && cddBaseVO.isNoObjection == 'Y'}">
+                                        <span class="GLDBWXSCQ">COMPLIANCE ADVISEMENT - NO OBJECTION</span>&nbsp;&nbsp;&nbsp;
+		                     	</c:if>  
+                       			<c:if test="${not empty cddBaseVO.displayDueDate}">
+	                         		<span class="GLDBWXSNQ">${baseCddAttributeLables.DUE_DATE.label}:</span>
+	                                <span class="GLDBWXSCQ">${cddBaseVO.displayDueDate}</span>
+	                         		&nbsp;&nbsp;&nbsp;
+                         		</c:if>
+                                <span class="GLDBWXSNQ">${baseCddAttributeLables.TRIGGERED_DATE.label}:</span>
+                                <span class="GLDBWXSCQ">${cddBaseVO.displayTriggerDate}</span>&nbsp;&nbsp;
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <form name="baseForm" id="baseForm">
+        <input type="hidden" id="cddControlNumber" name="cddControlNumber" value="${cddBaseVO.cddControlNumber}" />
+        <input type="hidden" id="country" name="country" value="${cddBaseVO.country}" />
+        <input type="hidden" id="custType" name="custType" value="${cddBaseVO.custType}" />
+        <input type="hidden" id="custNumber" name="custNumber" value="${cddBaseVO.custNumber}" />
+        <input type="hidden" id="custName" name="custName" value="${cddBaseVO.custName}" />
+        <input type="hidden" id="clientType" name="clientType" value="${cddBaseVO.clientType}" />
+        <input type="hidden" id="custClientType" name="custClientType" value="${cddBaseVO.custClientType}" />
+        <input type="hidden" id="cddType" name="cddType" value="${cddBaseVO.cddType}" />
+        <input type="hidden" id="formRiskRating" name="formRiskRating" value="${cddBaseVO.formRiskRating}" />
+        <input type="hidden" id="custRiskRating" name="custRiskRating" value="${cddBaseVO.custRiskRating}" />
+        <input type="hidden" id="cddStatus" name="cddStatus" value="${cddBaseVO.cddStatus}" />
+        <input type="hidden" id="businessLine" name="businessLine" value="${cddBaseVO.businessLine}" />
+        <input type="hidden" id="spfFlag" name="spfFlag" value="${cddBaseVO.spfFlag}" />
+        <input type="hidden" id="formVersion" name="formVersion" value="${cddBaseVO.formVersion}" />
+        <input type="hidden" id="isOverlapping" name="isOverlapping" value="${cddBaseVO.overlapping}" />
+        <input type="hidden" id="currScreenName" name="currScreenName" value="${cddBaseVO.currScreenName}" />
+        <input type="hidden" id="currentFormName" name="currentFormName" value="" />
+        <input type="hidden" id="currFormStatus" name="currFormStatus" value="" />
+        <input type="hidden" id="customerNumber" name="customerNumber" value="${cddBaseVO.custNumber}" />
+        <input type="hidden" id="formVersion" name="formVersion" value="${cddBaseVO.formVersion}" />
+        <input type="hidden" id="isScreenReadOnly" name="isScreenReadOnly" value="${cddBaseVO.isReadOnly}" />
+        <input type="hidden" id="isAuthorize" name="isAuthorize" value="${isAuthorize}" />
+        <input type="hidden" id="actionComments" name="actionComments" value="" />
+        <input type="hidden" id="riskRatingDesc" name="riskRatingDesc" value="${cddBaseVO.riskRatingDesc}" />
+        <input type="hidden" id="auditFlag" name="auditFlag" value="COMMON" />
+        <input type="hidden" id="hdnTriggerType" name="hdnTriggerType" value="${cddBaseVO.triggerType}"/>
+    </form>
+    <input type="hidden" id="cddTriggerDate" name="cddTriggerDate" value="${cddBaseVO.cddTriggerDate}" />
+    <input type="hidden" id="actionType" name="actionType" value="" />
+    <input type="hidden" id="msgCode" name="msgCode" value="" />
+    <input type="hidden" id="isChanged" name="isChanged"/>
+    <input type="hidden" id="hdnIsCompliance" name="hdnIsCompliance" value="${cddBaseVO.isCompliance}"/>
+    <input type="hidden" id="hdnIsChecker" name="hdnIsChecker" value="${cddBaseVO.isChecker}"/>
+    <input type="hidden" id="formCompletionStatus" name="formCompletionStatus" value=""/>
+    <input type="hidden" id="auditPageNo" name="auditPageNo" value=""/>
+    <input type="hidden" id="selectedFormName" name="selectedFormName" value="" />
+    <div id="tabs">
+        <ul>
+            <c:if test="${not empty cddBaseVO.tabDetailsMap.CLIENT_PROFILE.tabName}">
+                <li id="CLIENT_PROFILE_LI"><a href="javascript:" id="CLIENT_PROFILE" onclick="loadForm(this,'clientProfile/init')">${cddBaseVO.tabDetailsMap.CLIENT_PROFILE.tabName}</a></li>
+            </c:if>
+            <sec:authorize access="hasAuthority('FUNCTION.CDD.RISKSUMMARY_VW')">
+	            <c:if test="${not empty cddBaseVO.tabDetailsMap.RISK_SUMMARY.tabName}">
+	                <li id="RISK_SUMMARY_LI"><a href="javascript:" id="RISK_SUMMARY" onclick="loadForm(this,'riskSummary/loadRiskSummary')">${cddBaseVO.tabDetailsMap.RISK_SUMMARY.tabName}</a></li>
+	            </c:if>
+            </sec:authorize>
+            <%-- CDD details form not required --%>
+            <%-- <sec:authorize access="hasAuthority('FUNCTION.KYC_REFRESH_DTLS_VW')">
+	            <c:if test="${not empty cddBaseVO.tabDetailsMap.CDD_DETAILS.tabName}">
+	                <li id="CDD_DETAILS_LI"><a href="javascript:" id="CDD_DETAILS" onclick="loadForm(this,'cddDetails/init')">${cddBaseVO.tabDetailsMap.CDD_DETAILS.tabName}</a></li>
+	            </c:if>
+            </sec:authorize> --%>
+            <sec:authorize access="hasAuthority('FUNCTION.KYC_REFRESH_DTLS_VW')">
+	            <c:if test="${not empty cddBaseVO.tabDetailsMap.KYC_REFRESH_DETAILS.tabName}">
+	                <li id="KYC_REFRESH_DETAILS_LI"><a href="javascript:" id="KYC_REFRESH_DETAILS" onclick="loadForm(this,'kycRefresh/init')">${cddBaseVO.tabDetailsMap.KYC_REFRESH_DETAILS.tabName}</a></li>
+	            </c:if>
+            </sec:authorize>
+            <sec:authorize access="hasAuthority('FUNCTION.CD.EDD_VW')">
+	            <c:if test="${not empty cddBaseVO.tabDetailsMap.EDD.tabName}">
+	                <li id="EDD_LI"><a href="javascript:" id="EDD" onclick="loadForm(this,'edd/init')">${cddBaseVO.tabDetailsMap.EDD.tabName}</a></li>
+	            </c:if>
+            </sec:authorize>
+            <sec:authorize access="hasAuthority('FUNCTION.CD.SCREENING_DTLS_VW')">
+	            <c:if test="${not empty cddBaseVO.tabDetailsMap.MEMBER_SCREENING.tabName}">
+	                <li id="MEMBER_SCREENING_LI"><a href="javascript:" id="MEMBER_SCREENING" onclick="loadForm(this,'screening/init?businessLine='+businessLineForScreening)">${cddBaseVO.tabDetailsMap.MEMBER_SCREENING.tabName}</a></li>
+	            </c:if>
+            </sec:authorize>
+            <sec:authorize access="hasAuthority('FUNCTION.CD.SOW_VW')">
+	            <c:if test="${not empty cddBaseVO.tabDetailsMap.SPF.tabName}">
+	                <li id="SPF_LI"><a href="javascript:" id="SPF" onclick="loadForm(this,'spf/initspf')">${cddBaseVO.tabDetailsMap.SPF.tabName}</a></li>
+	            </c:if>
+            </sec:authorize>
+            <sec:authorize access="hasAuthority('FUNCTION.CD.SPF_VW')">
+	            <c:if test="${not empty cddBaseVO.tabDetailsMap.SOW.tabName}">
+	                <li id="SOW_LI"><a href="javascript:" id="SOW" onclick="loadForm(this,'sow/init')">${cddBaseVO.tabDetailsMap.SOW.tabName}</a></li>
+	            </c:if>
+            </sec:authorize>
+            <sec:authorize access="hasAuthority('FUNCTION.CD.TRAT_VW')">
+	            <c:if test="${not empty cddBaseVO.tabDetailsMap.TRADE_ATTEST_FORM.tabName}">
+	                <li id="TRADE_ATTEST_FORM_LI"><a href="javascript:" id="TRADE_ATTEST_FORM" onclick="loadForm(this,'tradeAttest/init')">${cddBaseVO.tabDetailsMap.TRADE_ATTEST_FORM.tabName}</a></li>
+	            </c:if>
+            </sec:authorize>
+            <sec:authorize access="hasAuthority('FUNCTION.CD.DUEDILIGENCE')">
+	            <c:if test="${not empty cddBaseVO.tabDetailsMap.DUE_DELIGENCE.tabName}">
+	                <li id="DUE_DELIGENCE_LI"><a href="javascript:" id="DUE_DELIGENCE" onclick="loadForm(this,'duediligenceattestation/init')">${cddBaseVO.tabDetailsMap.DUE_DELIGENCE.tabName}</a></li>
+	            </c:if>
+            </sec:authorize>
+            <sec:authorize access="hasAuthority('FUNCTION.CD.DUEDILIGENCE')">
+	            <c:if test="${not empty cddBaseVO.tabDetailsMap.ATTESTATION.tabName}">
+	                <li id="ATTESTATION_LI"><a href="javascript:" id="ATTESTATION" onclick="loadForm(this,'duediligenceattestation/init')">${cddBaseVO.tabDetailsMap.ATTESTATION.tabName}</a></li>
+	            </c:if>
+            </sec:authorize>
+            <sec:authorize access="hasAuthority('FUNCTION.CD.CVR')">
+	            <c:if test="${not empty cddBaseVO.tabDetailsMap.CALL_VISIT_REPORT.tabName}">
+	                <li id="CALL_VISIT_REPORT_LI"><a href="javascript:" id="CALL_VISIT_REPORT" onclick="loadForm(this,'callVisit/init')">${cddBaseVO.tabDetailsMap.CALL_VISIT_REPORT.tabName}</a></li>
+	            </c:if>
+            </sec:authorize>
+            <sec:authorize access="hasAuthority('FUNCTION.CDD.PUP_VW')">
+	            <c:if test="${not empty cddBaseVO.tabDetailsMap.PUP.tabName}">
+	                <li id="PUP_LI"><a href="javascript:" id="PUP" onclick="loadForm(this,'pup/init')">${cddBaseVO.tabDetailsMap.PUP.tabName}</a></li>
+	            </c:if>
+            </sec:authorize>
+            <sec:authorize access="hasAuthority('FUNCTION.KYC_REFRESH_REVIEW_VW')">
+	            <c:if test="${not empty cddBaseVO.tabDetailsMap.KYC_REFRESH_ASSESSMENT.tabName}">
+	                <li id="KYC_REFRESH_ASSESSMENT_LI"><a href="javascript:" id="KYC_REFRESH_ASSESSMENT" onclick="loadForm(this,'kycRefReview/init')">${cddBaseVO.tabDetailsMap.KYC_REFRESH_ASSESSMENT.tabName}</a></li>
+	            </c:if>
+          	 </sec:authorize>
+            <sec:authorize access="hasAuthority('FUNCTION.CD.DOCUMENTS_VW')">
+	            <c:if test="${not empty cddBaseVO.tabDetailsMap.DOCUMENTS.tabName}">
+	                <li id="DOCUMENTS_LI"><a href="javascript:" id="DOCUMENTS" onclick="loadForm(this,'cddUploadDoc/init')">${cddBaseVO.tabDetailsMap.DOCUMENTS.tabName}</a></li>
+	            </c:if>
+            </sec:authorize>
+           <div align="right">
+           <c:if test="${isAuthorize == 'Y'}">
+	           <div class="actiondown">
+		           	<a href="javascript:" class="bbutton" id="actionBtn" style="line-height: 20px;">
+						${buttons.ACTION.label}
+					</a>
+					<div id="actionContent" class="actiondown-content">
+			                <c:if test="${cddBaseVO.isReadOnly == 'N' && cddBaseVO.isMaker == 'Y'}">
+			                	<a href="javascript:" id="submitBtn" onclick="submitFormAutoSave();">
+									${buttons.SUBMIT.label}
+								</a>
+			            	</c:if>
+			            	 <c:if test="${cddBaseVO.isReadOnly == 'N' && cddBaseVO.isMaker == 'Y' && cddBaseVO.isObjected == 'Y'}">
+			            	 	<a href="javascript:" id="terminateBtn" onclick="showActionCommentPopup(this,'TERMINATED');">${buttons.TERMINATE.label}</a>
+			            	 </c:if>
+			            	<c:if test="${cddBaseVO.isReadOnly == 'Y' && cddBaseVO.isChecker == 'Y'}">
+			                	<a href="javascript:"id="approveBtn" onclick="showActionCommentPopup(this,'APPROVE');">
+									${buttons.APPROVE.label}
+								</a>
+							</c:if>
+		                	<c:if test="${cddBaseVO.isReadOnly == 'Y' && cddBaseVO.isChecker == 'Y' && cddBaseVO.isObjected == 'Y'}">
+		                     	<a href="javascript:" id="terminateBtn" onclick="showActionCommentPopup(this,'TERMINATED');">${buttons.TERMINATE.label}</a>
+		                     </c:if>
+			            	<c:if test="${cddBaseVO.isReadOnly == 'Y'  && cddBaseVO.isCompliance == 'Y'}">
+			                	<a href="javascript:" id="objectionBtn" onclick="showActionCommentPopup(this,'OBJECTION');">
+									${buttons.OBJECTION.label}
+								</a>
+							</c:if>
+		                	<c:if test="${cddBaseVO.isReadOnly == 'Y'  && cddBaseVO.isCompliance == 'Y'}">
+		                    	<a href="javascript:" id="noObjectionBtn" onclick="showActionCommentPopup(this,'NO_OBJECTION');">${buttons.NO_OBJECTION.label}</a>
+		                    </c:if>
+		                    <c:if test="${cddBaseVO.isReadOnly == 'Y' && cddBaseVO.isChecker == 'Y' && cddBaseVO.enableReturnMkr == 'Y'}">
+		                     	<a href="javascript:" id="returnMkrBtn" onclick="showActionCommentPopup(this,'RETURN_MAKER');">${baseCddAttributeLables.RETURN_MAKER.label}</a>
+		                    </c:if>
+		                	<c:if test="${cddBaseVO.isReadOnly == 'Y' && cddBaseVO.isCompliance == 'Y'}">
+		                     	<a href="javascript:" id="returnMkrBtn" onclick="showActionCommentPopup(this,'RETURN_MAKER');">${baseCddAttributeLables.RETURN_MAKER.label}</a>
+		                    </c:if>
+							<%--<c:if test="${cddBaseVO.isReadOnly == 'Y'  && cddBaseVO.isCompliance == 'Y'}">
+		                		<a href="javascript:" id="returnCkrBtn" onclick="showActionCommentPopup(this,'RETURN_CHECKER');">${baseCddAttributeLables.RETURN_CHECKER.label}</a>
+		                	</c:if>--%>
+	                </div>
+	              </div>
+	              <c:if test="${cddBaseVO.isReadOnly == 'N' && cddBaseVO.isMaker == 'Y' && cddBaseVO.consumeRefreshFlag== 'Y'}">
+                        <c:choose>
+						  <c:when test="${cddBaseVO.consumedStatus == 'QUEUE_UP'}">
+						    <a href="javascript:" class="flash-button" id="refreshBtn" onclick="refreshCdd();">${buttons.REFRESH.label}</a>
+						  </c:when>
+						  <c:otherwise>
+						  	<a href="javascript:" class="bbutton" id="refreshBtn" onclick="refreshCdd();">${buttons.REFRESH.label}</a>
+						  </c:otherwise>
+						</c:choose>
+                  </c:if>
+              </c:if>
+              <c:if test="${isAuthorize == 'N'}">
+              		<a href="javascript:" class="bbuttonDisabled" id="actionBtn">
+						${buttons.ACTION.label}
+					</a>
+              </c:if>
+                <a href="javascript:" class="bbutton" id="cancelBtn" onclick="openPage('inbox/init');">${buttons.CANCEL.label}</a>
+                <a href="javascript:" class="infobutton" id="hdnCancelBtn" style="display:none">${buttons.CANCEL.label}</a>
+                <a href="javascript:" class="infobutton" id="hdnOkBtn" style="display:none">${buttons.OK.label}</a>
+            </div>
+        </ul>
+        <div id="formdiv" style="width: 100%; height: 80%;">
+        </div>
+    </div>
+    <div id="msgDialog" title="AML CDD" class="infomsg-div">
+    	<table id="idMsgComments" width="96%" border="0" cellspacing="0" cellpadding="0" align="center">
+    		<tbody>
+	    		<tr style="line-height: 1 !important;">
+	            	<td width="100%" height="25" style="line-height: 1 !important">
+	                    &nbsp;
+	                </td>
+	            </tr>
+	            <tr style="line-height: 1 !important;">
+	                <td width="100%" height="25" style="line-height: 1 !important;">
+	                	<span id="cddInfoMsg"></span>
+	                </td>
+	            </tr>
+	            <tr style="line-height: 1 !important;">
+	            	<td width="100%" height="25" style="line-height: 1 !important">
+	                    &nbsp;
+	                </td>
+	            </tr>
+	            <tr>
+	                <td width="96%" align="center" height="20px">
+	                	<a href="javascript:" class="infobutton" id="baseOkBtn" onclick="closeInfoPopup('msgDialog');">Ok</a>
+	                </td>
+	            </tr>
+            </tbody>
+        </table>
+    </div>
+    <div id="commentsDialog" title="AML CDD" style="display:none"></div>
+    <div id="auditDialog" title="AML CDD" style="display:none"></div>
+    <div id="auditDetailDialog" title="AML CDD" style="display:none"></div>
+    <div id="creauditDetailDialog" title="AML CDD" style="display:none"></div>
+	<div id="docUploadDialog" title="AML CDD" style="display:none"></div>
+    <table id="pageLoaderId" class="loader" style="display:none;z-index:500;position:absolute;">
+        <tr>
+            <td>
+                <%@ include file="common/ajaxResponseLoader.jsp"%>
+            </td>
+        </tr>
+    </table>
+    <div id="msgCommentsPopup" title="AML CDD" style="display:none;z-index:500;">
+        <table id="idCddComments" width="96%" border="0" cellspacing="0" cellpadding="0">
+            <tr class="cellboldodd">
+                <td width="30%"><font color="red" id="mandCommentsId" style="display:none">*</font>${baseCddAttributeLables.ACTION_COMMENTS.label}:</td>
+                <td width="70%">
+                    <textarea rows="4" cols="50" name="actionCmnts" id="actionCmnts" onblur='checkForMaxlenthInBlur(this,4000)' onkeypress='return checkForMaxlenth(event,this.value,4000)'></textarea>
+                </td>
+            </tr>
+            <tr class="cellboldodd">
+                <td width="100%">&nbsp;</td>
+            </tr>
+        </table>
+        <table width="96%" border="0" cellspacing="0" cellpadding="0" align="center">
+            <tr>
+                <td width="96%" align="center">
+                	<a href="javascript:" class="bbutton" id="submitCmtBtn" onclick="saveActionComments();"></a>&nbsp;&nbsp;&nbsp;
+                	<a href="javascript:" class="bbutton" id="baseCancelCmtBtn" onclick="closeActionComments('msgCommentsPopup');">Cancel</a>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+</body>
+<script>
+	var businessLineForScreening = "${cddBaseVO.businessLine}";
+	var businessLine = "${cddBaseVO.businessLine}";
+	var cdd = '${cddBaseJson}';
+    setCddValues();
+</script>
+</html>
