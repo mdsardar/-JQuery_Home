@@ -1,0 +1,109 @@
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.annotation.AfterThrowing;
+import org.aspectj.lang.annotation.Aspect;
+import org.hibernate.StaleObjectStateException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import com.citigroup.amlcdd.framework.exception.AmlCddException;
+import com.citigroup.amlcdd.framework.service.AmlCddCacheUtil;
+import com.citigroup.amlcdd.framework.util.ExceptionDetails;
+
+/**
+ * 
+ * Class to capture all exceptions thrown from service
+ * and DAO classes which automatically catches it and
+ * no try catch required from method level.
+ */
+@Aspect
+@Component
+public class ExceptionAspect {
+
+	@Autowired
+	AmlCddCacheUtil cddconfig;
+	
+	private boolean isTraceEnabled = true;
+	
+	public ExceptionAspect(){
+		//isTraceEnabled = cddconfig.getAppConfig(AMLCDDConstants.TRACE_ENABLED).equalsIgnoreCase("Y") ? true : false;
+	}
+	
+	private final Logger LOGGER = LoggerFactory.getLogger(ExceptionAspect.class);
+
+	/**
+	 * Method Name: runtimeExceptionAspect
+	 * Description: Method to capture the exceptions thrown from
+	 * any service layer and it catches and logs respectively
+	 * and re-throws amlcddexception
+	 * @return void
+	 * @param JoinPoint joinPoint, Throwable ex
+	 */
+	@AfterThrowing(pointcut = "execution(* com.citigroup.amlcdd.*.service.*.*(..)) || execution(* com.citigroup.amlcdd.*.*.service.*.*(..)) || execution(* com.citigroup.amlcdd.*.*.*.service.*.*(..))", throwing = "ex")
+	public void runtimeExceptionAspect(JoinPoint joinPoint, Throwable ex) throws AmlCddException {
+		handleException(joinPoint, ex, "Service");
+	}
+
+	/**
+	 * Method Name: serviceruntimeExceptionAspect
+	 * Description: Method to capture the exceptions thrown from
+	 * any Dao layer and it catches and logs respectively
+	 * and re-throws amlcddexception
+	 * @return void
+	 * @param JoinPoint joinPoint, Throwable ex
+	 */
+	@AfterThrowing(pointcut = "execution(* com.citigroup.amlcdd.*.dao.*.*(..)) || execution(* com.citigroup.amlcdd.*.*.dao.*.*(..)) || execution(* com.citigroup.amlcdd.*.*.*.dao.*.*(..))", throwing = "ex")
+	public void serviceruntimeExceptionAspect(JoinPoint joinPoint, Throwable ex) throws AmlCddException {
+		handleException(joinPoint, ex, "DAO");
+	}
+
+	/**
+	 * Method to log exception details of Service and DAO layer in the application.
+	 * Method creates the AMLCddException instance of the exception and throws the same.
+	 * @param joinPoint
+	 * @param ex
+	 * @throws AmlCddException
+	 */
+	private void handleException(JoinPoint joinPoint, Throwable ex, String source) throws AmlCddException {
+		String expClassName = joinPoint.getTarget().getClass().getName();
+		String expMethodName = joinPoint.getSignature().getName();
+		Object[] dataArgs = joinPoint.getArgs();
+		StringBuilder arguments = new StringBuilder();
+
+		for(Object signatureArg : dataArgs) {
+			arguments.append(signatureArg.toString());
+			arguments.append(",");
+		}
+		String expCode = ""; 
+		String expDescription = null;
+		if(ex instanceof StaleObjectStateException){
+			expCode = "OPTERR0001";
+		}
+		if(ex != null && null != ex.getCause()) {
+			expDescription = ex.getCause().getMessage();
+		} else {
+			expDescription = ex.getMessage();
+		}
+
+		//Log Exception Details
+		LOGGER.error("Exception: " + ex + " occured in: " + source + " :" + expClassName + " : " + expMethodName + " : Args: " + arguments.toString()
+				+ ". Exception Details: " + expCode + ":" + expDescription);
+
+		AmlCddException exp;  
+		if (!(ex instanceof AmlCddException)) {
+			exp = new AmlCddException(new ExceptionDetails(expCode, expDescription), ex.getCause(), dataArgs, expClassName);
+			if(isTraceEnabled){
+				StringBuilder builder = new StringBuilder();
+				StackTraceElement[] trace = ex.getStackTrace();
+				for (StackTraceElement traceElement : trace)
+					builder.append("\t " + traceElement + "\n");
+				LOGGER.debug(builder.toString());
+			}
+		} else {
+			exp = (AmlCddException)ex;
+		}
+		throw exp;
+	}
+
+}
