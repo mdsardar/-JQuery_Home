@@ -1,0 +1,808 @@
+@Component
+public class AmlCddCacheUtil{
+
+	private final Logger LOGGER = LoggerFactory.getLogger(AmlCddCacheUtil.class);
+
+	@Autowired
+	private CacheManager cacheManager;
+
+	@Autowired
+	private FormQuestionRenderUtil formQuestionRenderUtil;
+
+	@Autowired
+	private IUiLabelsDao iUiLabelsDao;
+
+	@Autowired
+	private IPickListLkUpDao iPickListLkUpDao;
+	
+	@Autowired
+	private Environment environment;
+	
+	@Autowired
+	private AmlCddCacheUtilProfile amlCddCacheUtilProfile;
+
+	/*
+	 * @Autowired private BaseController baseController;
+	 */
+
+	/**
+	 * @method: This method returns appConfig data
+	 * @param localeLangCode
+	 * @return Map<String, String>
+	 */
+	public Map<String, String> getConfigData() {
+		LOGGER.info("Inside the Class: AmlCddCacheUtil ---> method: getConfigData ");
+		ValueWrapper e1 = cacheManager.getCache(AMLCDDConstants.APP_CONFIG_CACHE).get(AMLCDDConstants.APP_CONFIG_CACHE);
+		Map<String, Map<String, String>> appConfigMap = (Map<String, Map<String, String>>) e1.get();
+		LOGGER.info("Exit the Class: AmlCddCacheUtil ---> method: getConfigData ");
+		return appConfigMap.get(getUserCountry());
+	}
+
+	/**
+	 * Method to get the application config data.
+	 * 
+	 * @param configType
+	 * @return
+	 */
+	public String getAppConfig(String configType) {
+		return getConfigData().get(configType);
+	}
+
+	/**
+	 * 
+	 * Method Name: getUiLabels Description: Method to perform <returns Uilabels
+	 * for given screen>
+	 * 
+	 * @return Map<String,String>
+	 * @param localeLangCode
+	 * @param screenName
+	 *
+	 */
+	public Map<String, UiLabelVO> getUiLabels(String country, String localeLangCode, String screenName) {
+		String template = "Enter into getUiLabels for countryCode : {0} ,localeLangCode : {1} and screenName : {2}";
+		String output = MessageFormat.format(template, new Object[] { country, localeLangCode, screenName });
+		LOGGER.info(output);
+		String languageCntry = CommonUtility.getCountryLanguageKey(country, localeLangCode);
+		LOGGER.info("Get UI Lables for screen: " + screenName + "Lang: " + languageCntry + "  from cache");
+		Map<String, UiLabelVO> cachedScreenUiLabelmap = null;
+		ValueWrapper uiElement = cacheManager.getCache(AMLCDDConstants.UILABEL_CACHE)
+				.get(AMLCDDConstants.UILABEL_CACHE);
+		Map<String, Map<String, Map<String, UiLabelVO>>> uiLablesMap = null;
+		if (!(uiElement != null)){
+			String defaultCntryLangKey = CommonUtility.getCountryLanguageKey(country, AMLCDDConstants.UI_DEFAULT_LANGUAGE);
+			Map<String, Map<String, Map<String, UiLabelVO>>> uiLablesMapdef =new HashMap<String, Map<String, Map<String, UiLabelVO>>>();
+			uiLablesMapdef.put(defaultCntryLangKey, iUiLabelsDao.loadCddUiLabels(country, AMLCDDConstants.UI_DEFAULT_LANGUAGE));
+			cacheManager.getCache(AMLCDDConstants.UILABEL_CACHE).put(AMLCDDConstants.UILABEL_CACHE, uiLablesMapdef);
+			ValueWrapper uiUpdatedElement = cacheManager.getCache(AMLCDDConstants.UILABEL_CACHE)
+					.get(AMLCDDConstants.UILABEL_CACHE);
+			uiLablesMap = (Map<String, Map<String, Map<String, UiLabelVO>>>) uiUpdatedElement.get();
+			if (uiLablesMap.get(defaultCntryLangKey) != null
+					&& !uiLablesMap.get(defaultCntryLangKey).isEmpty()) {
+				cachedScreenUiLabelmap = uiLablesMap.get(defaultCntryLangKey)
+						.get(screenName);
+			}
+		}
+		if (uiElement != null) {
+			uiLablesMap = (Map<String, Map<String, Map<String, UiLabelVO>>>) uiElement.get();
+			if (uiLablesMap.containsKey(languageCntry)) {
+				if ((uiLablesMap != null && !uiLablesMap.isEmpty() && uiLablesMap.size() > 0)) {
+					if (uiLablesMap.containsKey(languageCntry)) {
+						if (uiLablesMap.get(languageCntry) != null && !uiLablesMap.get(languageCntry).isEmpty()) {
+							cachedScreenUiLabelmap = uiLablesMap.get(languageCntry).get(screenName);
+
+						}
+					}
+				}
+			} else if (!AMLCDDConstants.UI_DEFAULT_LANGUAGE.equals(localeLangCode)) {
+				String defaultCntryLangKey = CommonUtility.getCountryLanguageKey(country, AMLCDDConstants.UI_DEFAULT_LANGUAGE);
+				if (uiLablesMap !=null && !uiLablesMap.containsKey(defaultCntryLangKey)) {
+					uiLablesMap.put(defaultCntryLangKey, iUiLabelsDao.loadCddUiLabels(country, AMLCDDConstants.UI_DEFAULT_LANGUAGE));
+					cacheManager.getCache(AMLCDDConstants.UILABEL_CACHE).put(AMLCDDConstants.UILABEL_CACHE, uiLablesMap);
+					ValueWrapper uiUpdatedElement = cacheManager.getCache(AMLCDDConstants.UILABEL_CACHE)
+							.get(AMLCDDConstants.UILABEL_CACHE);
+					uiLablesMap = (Map<String, Map<String, Map<String, UiLabelVO>>>) uiUpdatedElement.get();
+				}
+				if (uiLablesMap !=null && uiLablesMap.get(defaultCntryLangKey) != null
+						&& !uiLablesMap.get(defaultCntryLangKey).isEmpty()) {
+					cachedScreenUiLabelmap = uiLablesMap.get(defaultCntryLangKey)
+							.get(screenName);
+				}
+			}
+
+		}
+		if(cachedScreenUiLabelmap==null){
+				String defaultCntryLangKey = CommonUtility.getCountryLanguageKey(country, AMLCDDConstants.UI_DEFAULT_LANGUAGE);
+				if (uiLablesMap !=null && !uiLablesMap.containsKey(defaultCntryLangKey)) {
+				uiLablesMap.put(defaultCntryLangKey, iUiLabelsDao.loadCddUiLabels(country, AMLCDDConstants.UI_DEFAULT_LANGUAGE));
+				cacheManager.getCache(AMLCDDConstants.UILABEL_CACHE).put(AMLCDDConstants.UILABEL_CACHE, uiLablesMap);
+				ValueWrapper uiUpdatedElement = cacheManager.getCache(AMLCDDConstants.UILABEL_CACHE)
+						.get(AMLCDDConstants.UILABEL_CACHE);
+				uiLablesMap = (Map<String, Map<String, Map<String, UiLabelVO>>>) uiUpdatedElement.get();
+				}
+				if (uiLablesMap !=null && uiLablesMap.get(defaultCntryLangKey) != null
+					&& !uiLablesMap.get(defaultCntryLangKey).isEmpty()) {
+				cachedScreenUiLabelmap = uiLablesMap.get(defaultCntryLangKey)
+						.get(screenName);
+				}	
+		}
+		LOGGER.info("Exit the Class: AmlCddCacheUtil ---> method: getUiLabels ");
+		return cachedScreenUiLabelmap;
+	}
+
+	/**
+	 * 
+	 * Method Name: getPickListData Description: Method to perform <retrieval of
+	 * Picklist data except appconfig>
+	 * 
+	 * @return Map<String,PickListLkUpVO>
+	 * @param localeLangCode
+	 *
+	 */
+	/*
+	 * public Map<String, List<PickListLkUpVO>> getPickListData(String
+	 * localeLangCode, List<String> pickListTypes) {
+	 * LOGGER.info("Get Picklist: " + pickListTypes + " Lang: " + localeLangCode
+	 * + "  from cache"); String countryCode = getUserCountry(); String
+	 * cntryLangKey= getCountryLanguageKey(countryCode, localeLangCode);
+	 * LOGGER.info("cntryLangKey: " + cntryLangKey); Map<String,
+	 * List<PickListLkUpVO>> pickListMap = new HashMap<String,
+	 * List<PickListLkUpVO>>(); Map<String, Map<String, List<PickListLkUpVO>>>
+	 * pickListCacheMap = getCacheData(countryCode, localeLangCode);
+	 * if(!(pickListCacheMap!=null && pickListCacheMap.size() > 0)) {
+	 * pickListCacheMap = getCacheData(countryCode,
+	 * AMLCDDConstants.UI_DEFAULT_LANGUAGE); localeLangCode =
+	 * AMLCDDConstants.UI_DEFAULT_LANGUAGE; } if (isMapNotEmpty(cntryLangKey,
+	 * pickListCacheMap)) { Map<String, List<PickListLkUpVO>>
+	 * cachedPickListLabelMap = pickListCacheMap.get(cntryLangKey); for (String
+	 * pickListType : pickListTypes) { if
+	 * (cachedPickListLabelMap.containsKey(pickListType)) {
+	 * pickListMap.put(pickListType, new
+	 * ArrayList<PickListLkUpVO>(cachedPickListLabelMap.get(pickListType))); } }
+	 * } else if(!AMLCDDConstants.UI_DEFAULT_LANGUAGE.equals(localeLangCode)) {
+	 * Map<String, List<PickListLkUpVO>> cachedPickListLabelMap =
+	 * pickListCacheMap.get(countryCode.toUpperCase()+AMLCDDConstants.
+	 * UI_DEFAULT_LANGUAGE); for (String pickListType : pickListTypes) { if
+	 * (cachedPickListLabelMap.containsKey(pickListType)) {
+	 * pickListMap.put(pickListType, new
+	 * ArrayList<PickListLkUpVO>(cachedPickListLabelMap.get(pickListType))); } }
+	 * } LOGGER.
+	 * info("Exit the Class: AmlCddCacheUtil ---> method: getPickListData ");
+	 * return pickListMap; }
+	 */
+
+	/**
+	 * 
+	 * Method Name: getPickListData Description: Method to perform <retrieval of
+	 * Picklist data except appconfig>
+	 * 
+	 * @return Map<String,PickListLkUpVO>
+	 * @param localeLangCode
+	 *
+	 */
+	public Map<String, List<PickListLkUpVO>> getPickListData(String countryCode, String localeLangCode,
+			List<String> pickListTypes) {
+		String template = "Enter into getPickListData for countryCode : {0} ,localeLangCode : {1} and pickListTypes : {2}";
+		String output = MessageFormat.format(template, new Object[] { countryCode, localeLangCode, pickListTypes });
+		LOGGER.info(output);
+		String cntryLangKey = CommonUtility.getCountryLanguageKey(countryCode, localeLangCode);
+		LOGGER.info("cntryLangKey: " + cntryLangKey);
+		Map<String, List<PickListLkUpVO>> pickListMap = new HashMap<String, List<PickListLkUpVO>>();
+		Map<String, Map<String, List<PickListLkUpVO>>> pickListCacheMap = getCacheData(countryCode, localeLangCode);
+		if (!(pickListCacheMap != null && pickListCacheMap.size() > 0)) {
+				pickListCacheMap = getCacheData(countryCode, AMLCDDConstants.UI_DEFAULT_LANGUAGE);
+			//localeLangCode = AMLCDDConstants.UI_DEFAULT_LANGUAGE;
+		}
+		if (isMapNotEmpty(cntryLangKey, pickListCacheMap)) {
+			Map<String, List<PickListLkUpVO>> cachedPickListLabelMap = pickListCacheMap.get(cntryLangKey);
+			for (String pickListType : pickListTypes) {
+				if (cachedPickListLabelMap.containsKey(pickListType)) {
+					pickListMap.put(pickListType,
+							new ArrayList<PickListLkUpVO>(cachedPickListLabelMap.get(pickListType)));
+				}
+			}
+		} else if (!AMLCDDConstants.UI_DEFAULT_LANGUAGE.equals(localeLangCode)) {
+			String defaultCntryLangKey = CommonUtility.getCountryLanguageKey(countryCode, AMLCDDConstants.UI_DEFAULT_LANGUAGE);
+			Map<String, List<PickListLkUpVO>> cachedPickListLabelMap = pickListCacheMap
+					.get(defaultCntryLangKey);
+			for (String pickListType : pickListTypes) {
+				if (cachedPickListLabelMap.containsKey(pickListType)) {
+					pickListMap.put(pickListType,
+							new ArrayList<PickListLkUpVO>(cachedPickListLabelMap.get(pickListType)));
+				}
+			}
+		}
+		LOGGER.info("Exit the Class: AmlCddCacheUtil ---> method: getPickListData ");
+		return pickListMap;
+	}
+
+	/**
+	 * Method Name: getCacheData Description: Method to get PickList Data from
+	 * Cache Manager for the given language. If not preset in Cache, will hit
+	 * Database to retrieve picklist data for the requested language and update
+	 * the cache.
+	 * 
+	 * @return Map<String, Map<String, List<PickListLkUpVO>>> holds
+	 *         Map<language,Map<Picklistype,List<PicklistDetails>
+	 * @param String
+	 *            localeLangCode
+	 * 
+	 */
+	private Map<String, Map<String, List<PickListLkUpVO>>> getCacheData(String countryCode, String localeLangCode) {
+		String template = "Enter into getCacheData for countryCode : {0} , and localeLangCode : {1}";
+		String output = MessageFormat.format(template, new Object[] { countryCode, localeLangCode });
+		LOGGER.info(output);
+		String cntryLangKey = CommonUtility.getCountryLanguageKey(countryCode, localeLangCode);
+		ValueWrapper pickListElement = cacheManager.getCache(AMLCDDConstants.PICKLIST_CACHE)
+				.get(AMLCDDConstants.PICKLIST_CACHE);
+		Map<String, Map<String, List<PickListLkUpVO>>> pickListCacheMap = null;
+
+		if (pickListElement != null) {
+			pickListCacheMap = (Map<String, Map<String, List<PickListLkUpVO>>>) pickListElement.get();
+			if (!pickListCacheMap.containsKey(cntryLangKey)) {
+				Map<String, List<PickListLkUpVO>> pickListValueAndCodeMap = iPickListLkUpDao
+						.loadPickListValueAndCode(countryCode, localeLangCode);
+				if (pickListValueAndCodeMap != null && pickListValueAndCodeMap.size() > 0) {
+					pickListCacheMap.put(cntryLangKey,
+							iPickListLkUpDao.loadPickListValueAndCode(countryCode, localeLangCode));
+					cacheManager.getCache(AMLCDDConstants.PICKLIST_CACHE).put(AMLCDDConstants.PICKLIST_CACHE,
+							pickListCacheMap);
+					ValueWrapper uiUpdatedElement = cacheManager.getCache(AMLCDDConstants.PICKLIST_CACHE)
+							.get(AMLCDDConstants.PICKLIST_CACHE);
+					pickListCacheMap = (Map<String, Map<String, List<PickListLkUpVO>>>) uiUpdatedElement.get();
+				}
+			}
+		}
+		return pickListCacheMap;
+	}
+
+	/**
+	 * 
+	 * Method Name: getPickListData Description: Method to get PickList values
+	 * for the given pickList Type.
+	 * 
+	 * @return List<PickListLkUpVO>
+	 * @param String
+	 *            localeLangCode, String pickListType
+	 *
+	 */
+	/*
+	 * public List<PickListLkUpVO> getPickListData(String localeLangCode, String
+	 * pickListType) { LOGGER.info("Get Picklist: " + pickListType + " Lang: " +
+	 * localeLangCode + "  from cache"); String cntryLangKey=
+	 * getCountryLanguageKey(getUserCountry(), localeLangCode);
+	 * List<PickListLkUpVO> pickListVOs = null; Map<String, Map<String,
+	 * List<PickListLkUpVO>>> pickListCacheMap = getCacheData(getUserCountry(),
+	 * localeLangCode); if(!(pickListCacheMap!=null && pickListCacheMap.size() >
+	 * 0)) { pickListCacheMap = getCacheData(getUserCountry(),
+	 * AMLCDDConstants.UI_DEFAULT_LANGUAGE); localeLangCode =
+	 * AMLCDDConstants.UI_DEFAULT_LANGUAGE; } if (isMapNotEmpty(cntryLangKey,
+	 * pickListCacheMap)) { Map<String, List<PickListLkUpVO>>
+	 * cachedPickListLabelMap = pickListCacheMap.get(cntryLangKey);
+	 * if(cachedPickListLabelMap!= null &&
+	 * cachedPickListLabelMap.containsKey(pickListType)) { pickListVOs = new
+	 * ArrayList<PickListLkUpVO>(cachedPickListLabelMap.get(pickListType)); } }
+	 * else if(!AMLCDDConstants.UI_DEFAULT_LANGUAGE.equals(localeLangCode)) {
+	 * Map<String, List<PickListLkUpVO>> cachedPickListLabelMap =
+	 * pickListCacheMap.get(getUserCountry().toUpperCase()+AMLCDDConstants.
+	 * UI_DEFAULT_LANGUAGE); if(cachedPickListLabelMap!= null &&
+	 * cachedPickListLabelMap.containsKey(pickListType)) { pickListVOs = new
+	 * ArrayList<PickListLkUpVO>(cachedPickListLabelMap.get(pickListType)); } }
+	 * LOGGER.
+	 * info("Exit the Class: AmlCddCacheUtil ---> method: getPickListData ");
+	 * sortPickListDataByDescription(pickListVOs); return pickListVOs; }
+	 */
+
+	/**
+	 * 
+	 * Method Name: getPickListData Description: Method to get PickList values
+	 * for the given pickList Type.
+	 * 
+	 * @return List<PickListLkUpVO>
+	 * @param String
+	 *            localeLangCode, String pickListType
+	 *
+	 */
+	public List<PickListLkUpVO> getPickListData(String countryCode, String localeLangCode, String pickListType) {
+		String template = "Enter into getPickListData for countryCode : {0} ,localeLangCode : {1} and pickListType : {2}";
+		String output = MessageFormat.format(template, new Object[] { countryCode, localeLangCode, pickListType });
+		LOGGER.info(output);
+		String cntryLangKey = CommonUtility.getCountryLanguageKey(countryCode, localeLangCode);
+		List<PickListLkUpVO> pickListVOs = null;
+		Map<String, Map<String, List<PickListLkUpVO>>> pickListCacheMap = getCacheData(countryCode, localeLangCode);
+		if (!(pickListCacheMap != null && pickListCacheMap.size() > 0)) {
+				pickListCacheMap = getCacheData(countryCode, AMLCDDConstants.UI_DEFAULT_LANGUAGE);
+			//localeLangCode = AMLCDDConstants.UI_DEFAULT_LANGUAGE;
+		}
+		if (isMapNotEmpty(cntryLangKey, pickListCacheMap)) {
+			Map<String, List<PickListLkUpVO>> cachedPickListLabelMap = pickListCacheMap.get(cntryLangKey);
+			if (cachedPickListLabelMap != null && cachedPickListLabelMap.containsKey(pickListType)) {
+				pickListVOs = new ArrayList<PickListLkUpVO>(cachedPickListLabelMap.get(pickListType));
+			}
+		} else if (!AMLCDDConstants.UI_DEFAULT_LANGUAGE.equals(localeLangCode)) {
+			String defaultCntryLangKey = CommonUtility.getCountryLanguageKey(countryCode, AMLCDDConstants.UI_DEFAULT_LANGUAGE);
+			Map<String, List<PickListLkUpVO>> cachedPickListLabelMap = pickListCacheMap
+					.get(defaultCntryLangKey);
+			if (cachedPickListLabelMap != null && cachedPickListLabelMap.containsKey(pickListType)) {
+				pickListVOs = new ArrayList<PickListLkUpVO>(cachedPickListLabelMap.get(pickListType));
+			}
+		}
+		LOGGER.info("Exit the Class: AmlCddCacheUtil ---> method: getPickListData ");
+		sortPickListDataByDescription(pickListVOs);
+		return pickListVOs;
+	}
+	
+	
+	public List<PickListLkUpVO> getPickListDataFromConfigData(String countryCode, String localeLangCode, String pickListType,CddBaseVO cddBaseVO) {
+		List<PickListLkUpVO> pickListVO=new ArrayList<PickListLkUpVO>();
+		pickListVO=amlCddCacheUtilProfile.getPickListDataFromConfigDetailData(countryCode, localeLangCode, pickListType, cddBaseVO);
+		return pickListVO;
+	}
+
+	/**
+	 * 
+	 * Method Name: getPickList Description: Method to get picklist details for
+	 * respective PickList Type
+	 * 
+	 * @return List<PickListLkUpVO> holds data of requested PicklistType,
+	 *         PickListLkUpVO has code, value and Description.
+	 * @param String
+	 *            pickListType
+	 *
+	 */
+	public Map<String, PickListLkUpVO> getPickListMap(String pickListType, String countryCode, String language) {
+		String template = "Enter into getPickListMap for pickListType : {0} ,countryCode : {1} and language : {2}";
+		String output = MessageFormat.format(template, new Object[] { pickListType, countryCode, language });
+		LOGGER.info(output);
+		Map<String, PickListLkUpVO> pickListLabelMap = new HashMap<String, PickListLkUpVO>();
+		List<PickListLkUpVO> pickListVOs = getPickListData(countryCode, language, pickListType);
+		for (PickListLkUpVO pickListLkUpVO : pickListVOs) {
+			pickListLabelMap.put(pickListLkUpVO.getCode(), pickListLkUpVO);
+		}
+		return pickListLabelMap;
+	}
+
+	/**
+	 * 
+	 * Method Name: isMapNotEmpty Description: Method to check if map is empty
+	 * or not. And if map contains given language data this method returns true.
+	 * 
+	 * @return boolean
+	 * @param String
+	 *            localeLangCode, Map<String, Map<String, List<PickListLkUpVO>>>
+	 *            pickListCacheMap
+	 *
+	 */
+	private boolean isMapNotEmpty(String countryLangCode,
+			Map<String, Map<String, List<PickListLkUpVO>>> pickListCacheMap) {
+		if ((pickListCacheMap != null && !pickListCacheMap.isEmpty() && pickListCacheMap.size() > 0)) {
+			if (pickListCacheMap.containsKey(countryLangCode)) {
+				if (pickListCacheMap.get(countryLangCode) != null && !pickListCacheMap.get(countryLangCode).isEmpty()) {
+					return true;
+
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * 
+	 * Method Name: getFormQuestionDetails Description: Method to return all
+	 * question field labels from cache
+	 * 
+	 * @return Map<String, FormQuestionRenderVO>
+	 * @param CddBaseVO
+	 *            objCddBaseVO, String language
+	 * @throws ParseException
+	 *
+	 */
+	public Map<String, FormQuestionRenderVO> getFormQuestionDetails(CddBaseVO objCddBaseVO, String language,
+			String country) throws ParseException {
+		LOGGER.info("Retrieve Form Questionnaire from cache for " + objCddBaseVO.toString() + " for Lang: " + language
+				+ " and Country:  " + country+ " and version:  " +objCddBaseVO.getFormVersion());
+		// String country = objCddBaseVO.getCountry();
+		String key = null;
+		if (language != null && !language.isEmpty() && null != country && !country.isEmpty()) {
+			key = CommonUtility.getCountryLanguageKey(country, language);
+		}
+		ValueWrapper qstListElement = cacheManager.getCache(AMLCDDConstants.QUESTION_CACHE)
+				.get(AMLCDDConstants.QUESTION_CACHE);
+		Map<String, Map<FormQuestionKeyVO, FormQuestionMapVO>> langQstCacheMap = null;
+		Map<FormQuestionKeyVO, FormQuestionMapVO> qstCacheMap = null;
+		Map<String, FormQuestionRenderVO> qstLabelMap = null;
+		if (qstListElement != null) {
+			langQstCacheMap = (Map<String, Map<FormQuestionKeyVO, FormQuestionMapVO>>) qstListElement.get();
+			if (langQstCacheMap.containsKey(key)) {
+				LOGGER.info("Questions Exist in cache for country and Language: " + key);
+				qstCacheMap = langQstCacheMap.get(key);
+			} else {
+				LOGGER.info("Questions Don't Exist in Cache for country and Language: " + key);
+				String cntryLanguage = CommonUtility.getCountryLanguageKey(country, AMLCDDConstants.UI_DEFAULT_LANGUAGE);
+				qstCacheMap = langQstCacheMap.get(cntryLanguage);
+			}
+			FormQuestionKeyVO objFormQuestionKeyVO = prepareQuestionKey(objCddBaseVO);
+			if (qstCacheMap.containsKey(objFormQuestionKeyVO)) {
+				LOGGER.info("Questions Exist for the given key.");
+				qstLabelMap = prepareQuestionLabels(qstCacheMap.get(objFormQuestionKeyVO), objCddBaseVO);
+			} else {
+        		/*
+        		 * @ Author    : jr57611
+        		 * Else loop logic added for multiple version support to fetch questionnaire
+        		 * from previous versions. For Example , Let's assume Version 1, 2 and 5 may
+        		 * be configured for one screen. CDD with Form version 5 will
+        		 * return questions from version 5. CDD with Form version 4 will
+        		 * return questions previous available version i.e.2. Similarly
+        		 * CDDs with Form version 3 & 2 will use questions from version 2.
+        		 * CDD with form version 1 will use questions from version 1
+        		 */
+			    if(objFormQuestionKeyVO.getVersionNum()>0){
+				for( long verNum = objFormQuestionKeyVO.getVersionNum() - 1 ; verNum > 0 ; verNum --){
+				    objFormQuestionKeyVO.setVersionNum(verNum);
+				    if (qstCacheMap.containsKey(objFormQuestionKeyVO)) {
+					LOGGER.info("Questions Exist for the version "+verNum);
+					qstLabelMap = prepareQuestionLabels(qstCacheMap.get(objFormQuestionKeyVO), objCddBaseVO);
+					break;// break current for loop
+				   } 
+				}
+			    }
+				 
+			}
+		}
+		return qstLabelMap;
+	}
+
+	/**
+	 * 
+	 * Method Name: loadAndCacheQuestions Description: Method load language
+	 * based question field details and cache it this method should be called on
+	 * user language change
+	 * 
+	 * @return void
+	 * @param String
+	 *            language
+	 * @throws ParseException
+	 *
+	 */
+	public void loadAndCacheQuestions(String country, String language) throws ParseException {
+		Map<FormQuestionKeyVO, FormQuestionMapVO> questionCacheMap = formQuestionRenderUtil
+				.loadFormQuestionDetails(language, country);
+		if (questionCacheMap != null) {
+			Map<String, Map<FormQuestionKeyVO, FormQuestionMapVO>> langQstCacheMap = new LinkedHashMap<String, Map<FormQuestionKeyVO, FormQuestionMapVO>>();
+			((Map<String, Map<FormQuestionKeyVO, FormQuestionMapVO>>) cacheManager
+					.getCache(AMLCDDConstants.QUESTION_CACHE).get(AMLCDDConstants.QUESTION_CACHE).get())
+							.put(CommonUtility.getCountryLanguageKey(country, language), questionCacheMap);
+		}
+	}
+
+	/**
+	 * 
+	 * Method Name: prepareQuestionKey Description: Method to prepare question
+	 * keys to be used in caching and retrieval
+	 * 
+	 * @return FormQuestionKeyVO
+	 * @param CddBaseVO
+	 *            objCddBaseVO
+	 *
+	 */
+	private FormQuestionKeyVO prepareQuestionKey(CddBaseVO objCddBaseVO) {
+		FormQuestionKeyVO objFormQuestionKeyVO = new FormQuestionKeyVO();
+
+		objFormQuestionKeyVO.setCountryCode(objCddBaseVO.getCountry());
+		objFormQuestionKeyVO.setBusinessUnit(objCddBaseVO.getBusinessLine());
+		objFormQuestionKeyVO.setClientType(objCddBaseVO.getClientType());
+		objFormQuestionKeyVO.setRiskRating(objCddBaseVO.getFormRiskRating());
+		objFormQuestionKeyVO.setScreenName(objCddBaseVO.getCurrScreenName());
+		objFormQuestionKeyVO.setVersionNum(objCddBaseVO.getFormVersion());
+		LOGGER.info("Questionaire Retrieval Key : " + objFormQuestionKeyVO.toString());
+		return objFormQuestionKeyVO;
+	}
+
+	/**
+	 * 
+	 * Method Name: prepareQuestionLabels Description: Method to prepare field
+	 * map to be used in form specific FTLs
+	 * 
+	 * @return Map<String, FormQuestionRenderVO>
+	 * @param FormQuestionMapVO
+	 *            objFormQuestionMapVO,CddBaseVO objCddBaseVO
+	 * @throws ParseException
+	 *
+	 */
+	private Map<String, FormQuestionRenderVO> prepareQuestionLabels(FormQuestionMapVO objFormQuestionMapVO,
+			CddBaseVO objCddBaseVO) throws ParseException {
+		Map<String, FormQuestionRenderVO> qstLabelMap = new LinkedHashMap<String, FormQuestionRenderVO>();
+		qstLabelMap.putAll(objFormQuestionMapVO.getFieldMap());
+                	for (FormQuestionVO objFormQuestionVO : objFormQuestionMapVO.getDateQuestionList()) {
+                	    if (objFormQuestionVO.getQstEndVersion() != null 
+                		    && objCddBaseVO.getFormVersion() <= objFormQuestionVO.getQstEndVersion().longValue()) {
+                		qstLabelMap.putAll(objFormQuestionVO.getFieldMap());
+                	    }
+                	}
+		return qstLabelMap;
+	}
+
+	public Map<String, RiskSummaryVO> getRiskSummaryDetails(String country, String language) {
+		String template = "Enter into getRiskSummaryDetails for language : {0}";
+		String output = MessageFormat.format(template, new Object[] { language });
+		LOGGER.info(output);
+		ValueWrapper qstListElement = cacheManager.getCache(AMLCDDConstants.RISK_SUMMARY_CACHE)
+				.get(AMLCDDConstants.RISK_SUMMARY_CACHE);
+		Map<String, Map<String, RiskSummaryVO>> langRiskCacheMap = null;
+		Map<String, Map<String, Map<String, RiskSummaryVO>>> riskSmmryQstCacheMap = null;
+		Map<String, RiskSummaryVO> riskCacheMap = null;
+		String cntryLangKey = CommonUtility.getCountryLanguageKey(country, language);
+
+		if (qstListElement != null) {
+			riskSmmryQstCacheMap = (Map<String, Map<String, Map<String, RiskSummaryVO>>>) qstListElement.get();
+			if (riskSmmryQstCacheMap != null && riskSmmryQstCacheMap.size() > 0) {
+				if (CommonUtility.isNotNull(language) && CommonUtility.isNotNull(cntryLangKey)) {
+					langRiskCacheMap = riskSmmryQstCacheMap.get(cntryLangKey);
+					if (langRiskCacheMap != null && !langRiskCacheMap.isEmpty() && langRiskCacheMap.containsKey(language.toLowerCase())) {
+						riskCacheMap = langRiskCacheMap.get(language.toLowerCase());
+					}
+				}
+				//For selected language labels are not available, so consider default language
+				if (riskCacheMap == null && (langRiskCacheMap == null || langRiskCacheMap.isEmpty())) {
+					cntryLangKey = CommonUtility.getCountryLanguageKey(country, AMLCDDConstants.UI_DEFAULT_LANGUAGE);
+					if (CommonUtility.isNotNull(cntryLangKey)) {
+						langRiskCacheMap = riskSmmryQstCacheMap.get(cntryLangKey);
+						if (langRiskCacheMap != null && !langRiskCacheMap.isEmpty() && langRiskCacheMap.containsKey(AMLCDDConstants.UI_DEFAULT_LANGUAGE.toLowerCase())) {
+							riskCacheMap = langRiskCacheMap.get(AMLCDDConstants.UI_DEFAULT_LANGUAGE.toLowerCase());
+						}
+					}
+				}
+			}
+
+		}
+		return riskCacheMap;
+	}
+
+	/**
+	 * 
+	 * Method Name: sortPickListDataByDescription Description: Method to sort
+	 * picklist by field PickListDesc.
+	 * 
+	 * @return void
+	 * @param List<PickListLkUpVO>
+	 *            list
+	 *
+	 */
+	private void sortPickListDataByDescription(List<PickListLkUpVO> pickListLkList) {
+		if (CollectionUtils.isEmpty(pickListLkList)) {
+			return;
+		}
+		class PickListComperator implements Comparator<PickListLkUpVO> {
+			@Override
+			public int compare(PickListLkUpVO vo1, PickListLkUpVO vo2) {
+				if (vo1 != null && vo2 != null && StringUtils.hasText(vo1.getPickListDesc())
+						&& StringUtils.hasText(vo2.getPickListDesc())) {
+					return vo1.getPickListDesc().compareTo(vo2.getPickListDesc());
+				}
+				return 1;
+			}
+		}
+		Collections.sort(pickListLkList, new PickListComperator());
+	}
+
+	/**
+	 * Method Name: updatePickListCache Description: Method to perform Update
+	 * cache
+	 * 
+	 * @return Map<String,List<PickListLkUpVO>>
+	 * @param
+	 * 
+	 */
+	public void updatePickListCache(String country, String localeLangCode, List<String> pickListTypes,
+			List<PickListLkUpVO> pickListLkUpVOList) {
+		String template = "Enter into updatePickListCache for country : {0},  localeLangCode : {1}, pickListTypes : {2}";
+		String output = MessageFormat.format(template, new Object[] { country, localeLangCode, pickListTypes });
+		LOGGER.info(output);
+		Map<String, Map<String, List<PickListLkUpVO>>> pickListCacheMap = null;
+		// String cntryLangKey=
+		// country.toUpperCase()+AMLCDDConstants.HYPHEN_STRING+localeLangCode.toUpperCase();
+		String cntryLangKey = CommonUtility.getCountryLanguageKey(country, localeLangCode);
+		Map<String, List<PickListLkUpVO>> pickListMap = new HashMap<String, List<PickListLkUpVO>>();
+		List<PickListLkUpVO> list = new ArrayList<>();
+		ValueWrapper pickListElement = cacheManager.getCache(AMLCDDConstants.PICKLIST_CACHE)
+				.get(AMLCDDConstants.PICKLIST_CACHE);
+		pickListCacheMap = (Map<String, Map<String, List<PickListLkUpVO>>>) pickListElement.get();
+		Map<String, List<PickListLkUpVO>> map = pickListCacheMap.get(cntryLangKey);
+		if (pickListLkUpVOList != null) {
+			for (PickListLkUpVO pickListLkUpVO : pickListLkUpVOList) {
+				List<PickListLkUpVO> voList = new ArrayList<>();
+
+				list = map.get(pickListLkUpVO.getPickListType());
+				if ((AMLCDDConstants.APPROVED).equals(pickListLkUpVO.getAuthStatus())
+						|| (AMLCDDConstants.ADD_APPROVED).equals(pickListLkUpVO.getAuthStatus())) {
+					list.add(pickListLkUpVO);
+					map.put(pickListLkUpVO.getPickListType(), list);
+					pickListCacheMap.put(cntryLangKey, map);
+					cacheManager.getCache(AMLCDDConstants.PICKLIST_CACHE).put(AMLCDDConstants.PICKLIST_CACHE,
+							pickListCacheMap);
+				} else if ((AMLCDDConstants.UPDATE_APPROVED).equals(pickListLkUpVO.getAuthStatus())
+						|| (AMLCDDConstants.INACTIVE).equals(pickListLkUpVO.getAuthStatus())
+						|| (AMLCDDConstants.DELETE_APPROVED).equals(pickListLkUpVO.getAuthStatus())) {
+					for (PickListLkUpVO pickListLkpVO : list) {
+						if (pickListLkpVO.getPickListType().equals(pickListLkUpVO.getPickListType())
+								&& pickListLkpVO.getCode().equals(pickListLkUpVO.getCode())) {
+							pickListLkpVO.setPickListType(pickListLkUpVO.getPickListType());
+							pickListLkpVO.setCode(pickListLkUpVO.getCode());
+							pickListLkpVO.setPickListvalue(pickListLkUpVO.getPickListvalue());
+							pickListLkpVO.setPickListDesc(pickListLkUpVO.getPickListDesc());
+							pickListLkpVO.setPickTypeFormVersionNum(pickListLkUpVO.getPickTypeFormVersionNum());
+							pickListLkpVO.setCreatedDate(pickListLkUpVO.getCreatedDate());
+							pickListLkpVO.setLastUpdatedDate(pickListLkUpVO.getLastUpdatedDate());
+							pickListLkpVO.setCreateId(pickListLkUpVO.getCreateId());
+							pickListLkpVO.setLastUpdatedId(pickListLkUpVO.getLastUpdatedId());
+					if(AMLCDDConstants.INACTIVE.equals(pickListLkUpVO.getAuthStatus()) || AMLCDDConstants.DELETE_APPROVED.equals(pickListLkUpVO.getAuthStatus()))
+						pickListLkpVO.setAuthStatus(AMLCDDConstants.INACTIVE);
+					else
+						pickListLkpVO.setAuthStatus(AMLCDDConstants.APPROVED);
+						}
+						voList.add(pickListLkpVO);
+					}
+
+					list = voList;
+					map.put(pickListLkUpVO.getPickListType(), list);
+					pickListCacheMap.put(cntryLangKey, map);
+					cacheManager.getCache(AMLCDDConstants.PICKLIST_CACHE).put(AMLCDDConstants.PICKLIST_CACHE,
+							pickListCacheMap);
+				}
+			}
+		}
+	}
+
+	/**
+	 * 
+	 * Method Name: updatePickListCache Description: Method to update the cache
+	 * dynamically
+	 * 
+	 * @return void
+	 * @param
+	 *
+	 */
+	public void updatePickListCacheForTriggerRefreshRules(String country, String localeLangCode,
+			List<String> pickListTypes, List<PickListLkUpVO> pickListLkUpVOList) {
+		String template = "Enter into updatePickListCacheForTriggerRefreshRules for country : {0},  localeLangCode : {1}, pickListTypes : {2}";
+		String output = MessageFormat.format(template, new Object[] { country, localeLangCode, pickListTypes });
+		LOGGER.info(output);
+		Map<String, Map<String, List<PickListLkUpVO>>> pickListCacheMap = null;
+		Map<String, List<PickListLkUpVO>> pickListMap = new HashMap<String, List<PickListLkUpVO>>();
+		// String cntryLangKey=
+		// country.toUpperCase()+AMLCDDConstants.HYPHEN_STRING+localeLangCode.toUpperCase();
+		String cntryLangKey = CommonUtility.getCountryLanguageKey(country, localeLangCode);
+		List<PickListLkUpVO> list = new ArrayList<>();
+
+		ValueWrapper pickListElement = cacheManager.getCache(AMLCDDConstants.PICKLIST_CACHE)
+				.get(AMLCDDConstants.PICKLIST_CACHE);
+		pickListCacheMap = (Map<String, Map<String, List<PickListLkUpVO>>>) pickListElement.get();
+		Map<String, List<PickListLkUpVO>> map = pickListCacheMap.get(cntryLangKey);
+		if (null != map) {
+			if (pickListLkUpVOList != null) {
+				for (PickListLkUpVO pickListLkUpVO : pickListLkUpVOList) {
+					List<PickListLkUpVO> voList = new ArrayList<>();
+					list = map.get(pickListLkUpVO.getPickListType());
+					List<PickListLkUpVO> modifiedlst = new ArrayList();
+					if ((AMLCDDConstants.ADD_APPROVED).equals(pickListLkUpVO.getAuthStatus())) {
+						list.add(pickListLkUpVO);
+						map.put(pickListLkUpVO.getPickListType(), list);
+						pickListCacheMap.put(cntryLangKey, map);
+					} else {
+						for (PickListLkUpVO pickListLkpVO : list) {
+							if (pickListLkpVO.getPickListType().equals(pickListLkUpVO.getPickListType())
+									&& pickListLkpVO.getCode().equals(pickListLkUpVO.getCode())
+									&& pickListLkpVO.getPickListId().equals(pickListLkUpVO.getPickListId())) {
+
+								pickListLkpVO.setPickListType(pickListLkUpVO.getPickListType());
+								pickListLkpVO.setCode(pickListLkUpVO.getCode());
+								pickListLkpVO.setPickListvalue(pickListLkUpVO.getPickListvalue());
+								pickListLkpVO.setPickListDesc(pickListLkUpVO.getPickListDesc());
+								pickListLkpVO.setPickTypeFormVersionNum(pickListLkUpVO.getPickTypeFormVersionNum());
+								pickListLkpVO.setCreatedDate(pickListLkUpVO.getCreatedDate());
+								pickListLkpVO.setLastUpdatedDate(pickListLkUpVO.getLastUpdatedDate());
+								pickListLkpVO.setCreateId(pickListLkUpVO.getCreateId());
+								pickListLkpVO.setLastUpdatedId(pickListLkUpVO.getLastUpdatedId());
+								pickListLkpVO.setAuthStatus(pickListLkUpVO.getAuthStatus());
+								if ((AMLCDDConstants.UPDATE_APPROVED).equals(pickListLkUpVO.getAuthStatus())) {
+									voList.add(pickListLkpVO);
+								}
+							} else {
+								voList.add(pickListLkpVO);
+							}
+						}
+						list = voList;
+						map.put(pickListLkUpVO.getPickListType(), list);
+						pickListCacheMap.put(cntryLangKey, map);
+					}
+				}
+			}
+		}
+		cacheManager.getCache(AMLCDDConstants.PICKLIST_CACHE).put(AMLCDDConstants.PICKLIST_CACHE, pickListCacheMap);
+
+	}
+
+	/**
+	 * 
+	 * Method Name: getPickListData Description: Method to get PickList values
+	 * for the given pickList Type.
+	 * 
+	 * @return List<PickListLkUpVO>
+	 * @param String
+	 *            localeLangCode, String pickListType
+	 *
+	 */
+	/*
+	 * public List<PickListLkUpVO> getPickListData(String localeLangCode, String
+	 * pickListType) { String template =
+	 * "Enter into getPickListData for localeLangCode : {0} , and pickListType : {1}"
+	 * ; String output = MessageFormat.format(template, new Object[] {
+	 * localeLangCode, pickListType}); LOGGER.info(output); List<PickListLkUpVO>
+	 * pickListVOs = null; Map<String, Map<String, List<PickListLkUpVO>>>
+	 * pickListCacheMap = getCacheData(localeLangCode);
+	 * if(!(pickListCacheMap!=null && pickListCacheMap.size() > 0)) {
+	 * pickListCacheMap = getCacheData(AMLCDDConstants.UI_DEFAULT_LANGUAGE);
+	 * localeLangCode = AMLCDDConstants.UI_DEFAULT_LANGUAGE; } if
+	 * (isMapNotEmpty(localeLangCode, pickListCacheMap)) { Map<String,
+	 * List<PickListLkUpVO>> cachedPickListLabelMap =
+	 * pickListCacheMap.get(localeLangCode); if(cachedPickListLabelMap!= null &&
+	 * cachedPickListLabelMap.containsKey(pickListType)) { pickListVOs = new
+	 * ArrayList<PickListLkUpVO>(cachedPickListLabelMap.get(pickListType)); } }
+	 * else if(!AMLCDDConstants.UI_DEFAULT_LANGUAGE.equals(localeLangCode)) {
+	 * Map<String, List<PickListLkUpVO>> cachedPickListLabelMap =
+	 * pickListCacheMap.get(AMLCDDConstants.UI_DEFAULT_LANGUAGE);
+	 * if(cachedPickListLabelMap!= null &&
+	 * cachedPickListLabelMap.containsKey(pickListType)) { pickListVOs = new
+	 * ArrayList<PickListLkUpVO>(cachedPickListLabelMap.get(pickListType)); } }
+	 * LOGGER.
+	 * info("Exit the Class: AmlCddCacheUtil ---> method: getPickListData ");
+	 * sortPickListDataByDescription(pickListVOs); return pickListVOs; }
+	 */
+
+	/**
+	 * Method Name: getCacheData Description: Method to get PickList Data from
+	 * Cache Manager for the given language. If not preset in Cache, will hit
+	 * Database to retrieve picklist data for the requested language and update
+	 * the cache.
+	 * 
+	 * @return Map<String, Map<String, List<PickListLkUpVO>>> holds
+	 *         Map<language,Map<Picklistype,List<PicklistDetails>
+	 * @param String
+	 *            localeLangCode
+	 * 
+	 */
+	/*
+	 * private Map<String, Map<String, List<PickListLkUpVO>>>
+	 * getCacheData(String localeLangCode) { ValueWrapper pickListElement =
+	 * cacheManager.getCache(AMLCDDConstants.PICKLIST_CACHE)
+	 * .get(AMLCDDConstants.PICKLIST_CACHE); Map<String, Map<String,
+	 * List<PickListLkUpVO>>> pickListCacheMap = null;
+	 * 
+	 * if (pickListElement != null) { pickListCacheMap = (Map<String,
+	 * Map<String, List<PickListLkUpVO>>>) pickListElement.get(); if
+	 * (!pickListCacheMap.containsKey(localeLangCode)) { Map<String,
+	 * List<PickListLkUpVO>> pickListValueAndCodeMap =
+	 * iPickListLkUpDao.loadPickListValueAndCode(localeLangCode);
+	 * if(pickListValueAndCodeMap != null && pickListValueAndCodeMap.size() > 0)
+	 * { pickListCacheMap.put(localeLangCode,
+	 * iPickListLkUpDao.loadPickListValueAndCode(localeLangCode));
+	 * cacheManager.getCache(AMLCDDConstants.PICKLIST_CACHE).put(AMLCDDConstants
+	 * .PICKLIST_CACHE, pickListCacheMap); ValueWrapper uiUpdatedElement =
+	 * cacheManager.getCache(AMLCDDConstants.PICKLIST_CACHE)
+	 * .get(AMLCDDConstants.PICKLIST_CACHE); pickListCacheMap = (Map<String,
+	 * Map<String, List<PickListLkUpVO>>>) uiUpdatedElement.get(); } } } return
+	 * pickListCacheMap; }
+	 */
+
+	/**
+	 * Method to get User Context Country from session and it'll return the
+	 * country
+	 */
+	public String getUserCountry() {
+		if (SecurityContextHolder.getContext().getAuthentication() == null) {
+			return environment.getProperty(AMLCDDConstants.DEFAULT_COUNTRY);
+		} else {
+			UserContext uc = (UserContext) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+			return uc.getKycCountryCode();
+		}
+	}
+}
