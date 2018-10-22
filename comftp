@@ -1,0 +1,1830 @@
+<!-- 
+Macro Name	: auth
+Description	: Macro for Security Check.
+Input		: hasAuthority('<Function Name>')
+
+ -->
+<#macro auth expr>
+ <#assign security=JspTaglibs["http://www.springframework.org/security/tags"] />
+ <@security.authorize access=expr>
+  <#nested>
+ </@security.authorize>
+</#macro>
+
+
+<!-- 
+Macro Name	: formLabelAlone
+Description	: Macro to display the label/form question alone with * for Mandatory field. 
+Constrain	: This doesn't add TD tag to the screen. Doesn't add any formating exception adding * to Mandatory fields.
+Input		: questionMap - Questionaire Map 
+			  fieldName - Questionaire FLD Name
+		
+-->
+<#macro formLabelAlone questionMap fieldName>
+	<#if questionMap[fieldName] ??>
+		<#if  questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y"><font color="red">*</font><#else>&nbsp;&nbsp;</#if> ${questionMap[fieldName].formLabel}
+	</#if>
+</#macro>
+
+<!-- 
+Macro Name	: formLabelTD
+Description	:Macro to display the label/form question alone with * for Mandatory field along with TD Tag 
+Inputs		: questionMap - Questionaire Map
+			  fieldName: Questionaire FLD Name
+ 			  htmlsetting : htmlSettings that are applicable for the TD
+-->
+<#macro formLabelTD questionMap fieldName htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if htmlsetting??><TD class="cellboldodd" ${htmlsetting}><@formLabelAlone fieldName/></TD>
+		<#else><TD class="cellboldodd" ><@formLabelAlone fieldName/></TD></#if>
+	</#if>
+</#macro>
+
+<!-- Macro to display the data for the question. This displays the data as readonly field with out TD
+This can be used for source mapped fields.
+Input fields for the macro: 
+		txtName: name of the field in the data VO
+-->
+<#macro formDataAlone questionMap fieldName dataVo txtName htmlsetting="">
+		<#assign dataval = getData(dataVo,fieldName) />
+		<#if ( questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y") && (dataval == "" || dataval == " ")>
+			${htmlsetting} >${dataVo[txtName]}
+		<#else>
+			${htmlsetting} >${dataVo[txtName]}
+		</#if>
+</#macro>
+
+<!-- 
+
+<!-- Macro to display the data for the question. This displays the data as readonly field with TD
+This can be used for source mapped fields.
+Input fields for the macro: 
+		txtName: name of the field in the data VO
+		tdWidth: Width of the TD
+		align: Horizontal Align for the TD 
+-->
+<#macro formDataTD questionMap fieldName dataVo txtName htmlsetting="">
+		<#assign dataval = getData(dataVo,txtName) />
+		<#if (  questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y") && (dataval == "" || dataval == " ")>
+			<TD class="cellboldMandBorder" style="border-bottom: 1px solid red;" ${htmlsetting} >${dataval}</TD>
+		<#else>
+			<TD class="cellboldodd"  ${htmlsetting} >${dataval}</TD>
+		</#if>
+</#macro>
+
+<!-- 
+Macro to display the data for the question. This displays the data in text field without TD.
+This can be used for editable fields that uses textbox.
+Input fields for the macro: 
+		fieldName: Questionaire field name (used to check whether the field is mandatory or not)
+		txtName: name of the field in the data VO
+		tdWidth: Width of the TD
+		align: Horizontal Align for the TD 
+-->
+<#macro formTextAlone questionMap fieldName dataVo voFieldName htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#assign dataval = getData(dataVo,voFieldName) />
+		<@displayTextField questionMap fieldName voFieldName dataval htmlsetting/>
+	</#if>
+</#macro>
+
+<#macro formTextAloneWOVO questionMap fieldName dataval voFieldName htmlsetting>
+	<#if questionMap[fieldName] ??>
+		<@displayTextField questionMap fieldName voFieldName dataval htmlsetting/>
+	</#if>
+</#macro>
+
+<#macro formTextAloneWONameId questionMap fieldName ctrlNameId dataVo voFieldName htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#assign dataval = getData(dataVo, voFieldName) />
+		<@displayTextField questionMap fieldName ctrlNameId dataval htmlsetting/>
+	</#if>
+</#macro>
+
+<#macro formTextAloneNameIdWithOnchange questionMap fieldName ctrlNameId dataVo voFieldName onchange htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#assign dataval = getData(dataVo, voFieldName) />
+		<@displayTextFieldWithOnchange questionMap fieldName ctrlNameId dataval onchange htmlsetting/>
+	</#if>
+</#macro>
+
+<#macro formTextAloneNameIdWithChildVoOnchange questionMap fieldName ctrlNameId dataVo childVo voFieldName onchange htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if dataVo??>
+			<#if dataVo[childVo] ??>
+				<#local finalDataVo = dataVo[childVo] />
+				<#assign dataval = getData(finalDataVo, voFieldName) />		
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displayTextFieldWithOnchange questionMap fieldName ctrlNameId dataval onchange htmlsetting/>
+	</#if>
+</#macro>
+
+<#macro formTextAloneWONameIdWithChildVo questionMap fieldName ctrlNameId dataVo childVo voFieldName htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if dataVo??>
+			<#if dataVo[childVo] ??>
+				<#local finalDataVo = dataVo[childVo] />
+				<#assign dataval = getData(finalDataVo, voFieldName) />		
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displayTextField questionMap fieldName ctrlNameId dataval htmlsetting/>
+	</#if>
+</#macro>
+
+<#macro formTextFromChildVo questionMap fieldName baseVo childVo voFieldName htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if baseVo??>
+			<#if childVo??>
+				<#assign dataval = getData(childVo, voFieldName) />	
+				<#if dataval ??>
+					<#assign dataval = dataval />
+				<#else>
+					<#assign dataval = "" />
+				</#if>
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displayTextField questionMap fieldName voFieldName dataval htmlsetting/>
+	</#if>
+</#macro>
+
+<#macro formTextWONameIdFromChildVo questionMap fieldName ctrlNameId baseVo childVo voFieldName htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if baseVo??>
+			<#if childVo ??>
+				<#assign dataval = getData(childVo, voFieldName) />		
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displayTextField questionMap fieldName ctrlNameId dataval htmlsetting/>
+	</#if>
+</#macro>
+
+<#macro formRadioBTNameIdFromChildVo questionMap fieldName ctrlNameId dataVo childVo voFieldName pckListData onclickFucn htmlsetting>
+	<#if questionMap[fieldName] ??>
+		<#if dataVo??>
+			<#if dataVo[childVo] ??>
+				<#local finalDataVo = dataVo[childVo] />
+				<#assign dataval = getData(finalDataVo, voFieldName) />
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displayRadioButtonTd questionMap fieldName ctrlNameId dataval pckListData onclickFucn htmlsetting/>
+	</#if>
+</#macro>
+
+<#macro formTextWithListVoIndex questionMap fieldName ctrlNameId arrayIndex voFieldValue htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if voFieldValue??>
+			<#assign dataval = voFieldValue />	
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displayTextField questionMap fieldName ctrlNameId+arrayIndex dataval htmlsetting/>
+	</#if>
+</#macro>
+
+
+<#macro formTextWONameIdFromArrrayVo questionMap fieldName ctrlNameId baseVo listVo arrayIndex voFieldName htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if baseVo??>
+			<#if baseVo[listVo]??>
+				<#local dataVoArr = baseVo[listVo] />
+				<#if dataVoArr[arrayIndex]??>
+					<#local finalDataVo = dataVoArr[arrayIndex] />
+					<#assign dataval = getData(finalDataVo, voFieldName) />		
+				<#else>
+					<#assign dataval = "" />
+				</#if>
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displayTextField questionMap fieldName ctrlNameId dataval htmlsetting/>
+	</#if>
+</#macro>
+
+<#macro formSelectWONameIdFromArrrayVo questionMap fieldName ctrlNameId baseVo listVo arrayIndex voFieldName pckListData htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if baseVo??>
+			<#if baseVo[listVo]??>
+				<#local dataVoArr = baseVo[listVo] />
+				<#if dataVoArr[arrayIndex]??>
+					<#local finalDataVo = dataVoArr[arrayIndex] />
+					<#assign dataval = getData(finalDataVo, voFieldName) />		
+				<#else>
+					<#assign dataval = "" />
+				</#if>
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displaySelectDropdown questionMap fieldName ctrlNameId dataval pckListData htmlsetting/>
+	</#if>
+</#macro>
+
+<#macro formSelectWONameIdInMultiRowFromArrrayVo questionMap fieldName ctrlNameId baseVo listVo arrayIndex voFieldName pckListData htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if baseVo??>
+			<#if baseVo[listVo]??>
+				<#local dataVoArr = baseVo[listVo] />
+				<#if dataVoArr[arrayIndex]??>
+					<#local finalDataVo = dataVoArr[arrayIndex] />
+					<#assign dataval = getData(finalDataVo, voFieldName) />		
+				<#else>
+					<#assign dataval = "" />
+				</#if>
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displaySelectDropdown questionMap fieldName ctrlNameId+arrayIndex dataval pckListData htmlsetting/>
+	</#if>
+</#macro>
+<#macro formSelectWONameIdInScreening questionMap fieldName ctrlNameId dataValue arrayIndex pckListData htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<@displaySelectDropdown questionMap fieldName ctrlNameId+arrayIndex dataValue pckListData htmlsetting/>
+	</#if>
+</#macro>
+<#macro formTextAloneNameIdInEdd questionMap fieldName ctrlNameId dataValue arrayIndex  htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<@displayTextField questionMap fieldName ctrlNameId+arrayIndex dataValue htmlsetting/>
+	</#if>
+</#macro>
+
+<#macro formTextAreaWONameIdFromArrrayVo questionMap fieldName ctrlNameId baseVo listVo arrayIndex voFieldName isDisabled htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if baseVo??>
+			<#if baseVo[listVo]??>
+				<#local dataVoArr = baseVo[listVo] />
+				<#if dataVoArr[arrayIndex]??>
+					<#local finalDataVo = dataVoArr[arrayIndex] />
+					<#assign dataval = getData(finalDataVo, voFieldName) />		
+				<#else>
+					<#assign dataval = "" />
+				</#if>
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displayTextAreaField questionMap fieldName ctrlNameId dataval isDisabled htmlsetting/>
+	</#if>
+</#macro>
+
+<#macro formTextArea questionMap fieldName dataVo txtName htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+		<#assign dataval = getData(dataVo,txtName) />
+		<@displayTextAreaField questionMap fieldName txtName dataval htmlsetting/>
+	</#if>
+</#macro>
+<#macro formTextAreawithOnChange questionMap fieldName ctrlNameId dataVo txtName onchange htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+		<#assign dataval = getData(dataVo,txtName) />
+		<@displayTextAreaFieldWithOnChangeFun questionMap fieldName ctrlNameId dataval onchange htmlsetting/>
+	</#if>
+</#macro>
+
+<#macro displayTextAreaFieldWithOnChangeFun questionMap fieldName ctrlNameId dataval onchangefun htmlsetting="">
+	<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+	<#if questionMap[fieldName].iconInfoDesc ??>
+			<#assign hoverMsg= questionMap[fieldName].iconInfoDesc/>
+		<#else>
+			<#assign hoverMsg= questionMap[fieldName].formLabel/>
+	</#if>
+	<#if questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y">
+		<#assign removeBorderWhenOnchange= 'removeBorderColor(this);'/>
+		<#if onchangefun??> <#assign onChangeFunction = removeBorderWhenOnchange+onchangefun/><#else> <#assign onChangeFunction = removeBorderWhenOnchange /></#if>
+	<#else>
+		<#if onchangefun??> <#assign onChangeFunction = onchangefun/><#else> <#assign onChangeFunction = "" /></#if>
+	</#if>
+	<#if  questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y">
+		<#if (dataval) == "">
+		  <textarea name="${ctrlNameId}" id="${ctrlNameId}" title="${hoverMsg}" ${txthtmlsetting} style="border:1px solid #ff0000" onchange="${onChangeFunction}" rows="2" cols="50" >${dataval?html}</textarea>
+			
+		<#else>
+			<textarea name="${ctrlNameId}" id="${ctrlNameId}" title="${hoverMsg}" ${txthtmlsetting} style="border:1px solid #cccccc" onchange="${onChangeFunction}" rows="2" cols="50" >${dataval?html}</textarea>
+		</#if>
+	<#else>
+		<textarea name="${ctrlNameId}" id="${ctrlNameId}" title="${hoverMsg}" ${txthtmlsetting} style="border:1px solid #cccccc" rows="2" cols="50" }>${dataval?html}</textarea>
+	</#if>
+</#macro>
+
+<#macro formTextAreaWOId questionMap fieldName dataVo txtName htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+		<#if questionMap[fieldName].iconInfoDesc ??>
+			<#assign hoverMsg= questionMap[fieldName].iconInfoDesc/>
+		<#else>
+			<#assign hoverMsg= questionMap[fieldName].formLabel/>
+		</#if>
+		<#assign dataval = getData(dataVo,txtName) />
+		
+		<#if  questionMap[fieldName].isMandatory ?? &&  questionMap[fieldName].isMandatory == "Y">
+			<#if (dataval) == "">
+				<textarea name="${txtName}" title="${hoverMsg}" 
+									style="border:1px solid #ff0000" onblur="highlightMandatoryField(this , '${questionMap[fieldName].isMandatory}')" ${txthtmlsetting}  >${dataval?html}</textarea>
+			<#else>
+				<textarea name="${txtName}" title="${hoverMsg}" ${txthtmlsetting} 
+						    onblur="highlightMandatoryField(this , '${questionMap[fieldName].isMandatory}')">${dataval?html}</textarea>
+			</#if>
+		<#else>
+			<textarea name="${txtName}" id="${txtName}" title="${hoverMsg}" ${txthtmlsetting} >${dataval?html}</textarea>
+		</#if>
+	</#if>
+</#macro>
+
+<#macro formTextAreaWONameIdWithChildVo questionMap fieldName ctrlNameId dataVo childVo voFieldName htmlsetting>
+	<#if questionMap[fieldName] ??>
+		<#if dataVo??>
+			<#if dataVo[childVo] ??>
+				<#local finalDataVo = dataVo[childVo] />
+				<#assign dataval = getData(finalDataVo, voFieldName) />		
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+		<#if questionMap[fieldName].iconInfoDesc ??>
+			<#assign hoverMsg= questionMap[fieldName].iconInfoDesc/>
+		<#else>
+			<#assign hoverMsg= questionMap[fieldName].formLabel/>
+		</#if>
+		<#if  questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y">
+		<#if (dataval) == "">
+		    <textarea name="${ctrlNameId}" id="${ctrlNameId}" title="${hoverMsg}" ${txthtmlsetting} style="border:1px solid #ff0000" onchange='removeBorderColor(this);' rows="2" cols="50" >${dataval?html}</textarea>
+			
+		<#else>
+			<textarea name="${ctrlNameId}" id="${ctrlNameId}" title="${hoverMsg}" ${txthtmlsetting} style="border:1px solid #cccccc" onchange='removeBorderColor(this);' rows="2" cols="50" >${dataval?html}</textarea>
+		</#if>
+	<#else>
+		<textarea name="${ctrlNameId}" id="${ctrlNameId}" title="${hoverMsg}" ${txthtmlsetting} style="border:1px solid #cccccc" rows="2" cols="50" >${dataval?html}</textarea>
+	</#if>
+	
+	</#if>
+</#macro>
+
+
+
+<#macro formDropDown questionMap fieldName dataVo fieldValue pckListData htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+		<#if questionMap[fieldName].iconInfoDesc ??>
+			<#assign hoverMsg= questionMap[fieldName].iconInfoDesc/>
+		<#else>
+			<#assign hoverMsg= questionMap[fieldName].formLabel/>
+		</#if>
+		<#assign dataval = getData(dataVo,fieldValue) />
+		<#if  questionMap[fieldName].isMandatory ?? &&  questionMap[fieldName].isMandatory == "Y" && (dataval) == "">
+			<span title="${hoverMsg}"><select id="${fieldValue}" name="${fieldValue}" ${txthtmlsetting}  style="border:1px solid #ff0000" 
+					onblur="highlightMandatoryField(this , '${questionMap[fieldName].isMandatory}')">
+		<#else>
+			<span title="${hoverMsg}"><select id="${fieldValue}" name="${fieldValue}" ${txthtmlsetting}  onblur="highlightMandatoryField(this , '${questionMap[fieldName].isMandatory}')">
+		</#if>
+		<#list pckListData as pickList>
+		<#if pickList.code == dataval >
+				<option value="${pickList.code}" selected >${pickList.pickListDesc}</option>
+		<#else>
+				<option value="${pickList.code}" >${pickList.pickListDesc}</option>
+		</#if>
+		</#list>
+		</select></span>
+	</#if>
+</#macro>
+
+<#macro formDropDownDesc questionMap fieldName dataVo fieldValue pckListData htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		
+		<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+		<#if questionMap[fieldName].iconInfoDesc ??>
+			<#assign hoverMsg= questionMap[fieldName].iconInfoDesc/>
+		<#else>
+			<#assign hoverMsg= questionMap[fieldName].formLabel/>
+		</#if>
+		<#assign dataval = getData(dataVo,fieldValue) />
+		<#if  questionMap[fieldName].isMandatory ?? &&  questionMap[fieldName].isMandatory == "Y" && (dataval) == "">
+			<span title="${hoverMsg}"><select name="${fieldValue}" ${txthtmlsetting}  style="border:1px solid #ff0000" 
+					onblur="highlightMandatoryField(this , '${questionMap[fieldName].isMandatory}')">
+			
+		<#else>
+			<span title="${hoverMsg}"><select name="${fieldValue}" ${txthtmlsetting}  onblur="highlightMandatoryField(this , '${questionMap[fieldName].isMandatory}')">
+		</#if>
+		<#list pckListData as pickList>
+		<#if pickList.pickListDesc == dataval >
+			<#if pickList.code == '' >
+				<option value="" selected="selected" >${pickList.pickListDesc}</option>
+			<#else>
+				<option value="${pickList.pickListDesc}" selected="selected" >${pickList.pickListDesc}</option>
+			</#if>
+		<#else>
+			<#if pickList.code == '' >
+				<option value="" >${pickList.pickListDesc}</option>
+			<#else>
+				<option value="${pickList.pickListDesc}" >${pickList.pickListDesc}</option>
+			</#if>
+		</#if>
+		</#list>
+		</select></span>
+	</#if>
+</#macro>
+
+<#macro formDropDownWithoutVO questionMap fieldName dataval fieldValue pckListData htmlsetting>
+	<#if questionMap[fieldName] ??>
+		<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = htmlsetting /></#if>
+		<#if questionMap[fieldName].iconInfoDesc ??>
+			<#assign hoverMsg= questionMap[fieldName].iconInfoDesc/>
+		<#else>
+			<#assign hoverMsg= questionMap[fieldName].formLabel/>
+		</#if>
+		<#if  questionMap[fieldName].isMandatory ?? &&  questionMap[fieldName].isMandatory == "Y" && (dataval) == "">
+			<span title="${hoverMsg}"><select name="${fieldValue}" ${txthtmlsetting}  style="border:1px solid #ff0000" 
+					onblur="highlightMandatoryField(this , '${questionMap[fieldName].isMandatory}')">
+		<#else>
+			<span title="${hoverMsg}"><select name="${fieldValue}" ${txthtmlsetting}  onblur="highlightMandatoryField(this , '${questionMap[fieldName].isMandatory}')">
+		</#if>
+		<#list pckListData as pickList>
+		<#if pickList.pickListDesc == dataval >
+			<#if pickList.code == '' >
+				<option value="" selected="selected" >${pickList.pickListDesc}</option>
+			<#else>
+				<option value="${pickList.pickListDesc}" selected="selected" >${pickList.pickListDesc}</option>
+			</#if>
+		<#else>
+				<#if pickList.code == '' >
+					<option value="" >${pickList.pickListDesc}</option>
+				<#else>
+					<option value="${pickList.pickListDesc}" >${pickList.pickListDesc}</option>
+				</#if>
+		</#if>
+		</#list>
+		</select></span>
+	</#if>
+</#macro>
+
+<#macro formDropDownWONameId questionMap fieldName ctrlNameId dataVo fieldValue pckListData htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+		<#if questionMap[fieldName].iconInfoDesc ??>
+			<#assign hoverMsg= questionMap[fieldName].iconInfoDesc/>
+		<#else>
+			<#assign hoverMsg= questionMap[fieldName].formLabel/>
+		</#if>
+		<#assign dataval = getData(dataVo,fieldValue) />
+		<#if  questionMap[fieldName].isMandatory ?? &&  questionMap[fieldName].isMandatory == "Y" && (dataval) == "">
+			<span title="${hoverMsg}"><select id="${ctrlNameId}" name="${ctrlNameId}" ${txthtmlsetting}  style="border:1px solid #ff0000" 
+					onblur='removeBorderColor(this);'>
+		<#else>
+			<span title="${hoverMsg}"><select id="${ctrlNameId}" name="${ctrlNameId}" ${txthtmlsetting}  >
+		</#if>
+		<#list pckListData as pickList>
+		<#if pickList.code == dataval >
+				<option value="${pickList.code}" selected >${pickList.pickListDesc}</option>
+		<#else>
+				<option value="${pickList.code}" >${pickList.pickListDesc}</option>
+		</#if>
+		</#list>
+		</select></span>
+	</#if>
+</#macro>
+
+<#macro formDropDownWONameIdWithChildVo questionMap fieldName ctrlNameId dataVo childVo fieldValue pckListData htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+		<#if dataVo??>
+			<#if dataVo[childVo] ??>
+				<#local finalDataVo = dataVo[childVo] />
+				<#assign dataval = getData(finalDataVo, fieldValue) />		
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displaySelectDropdown questionMap fieldName ctrlNameId dataval pckListData htmlsetting/>
+	</#if>
+</#macro>
+
+<#macro formWithTextArea questionMap fieldName ctrlNameId arrayIndex dataval htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+		<#if questionMap[fieldName].iconInfoDesc ??>
+			<#assign hoverMsg= questionMap[fieldName].iconInfoDesc/>
+		<#else>
+			<#assign hoverMsg= questionMap[fieldName].formLabel/>
+		</#if>
+		<#if  questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y">
+			<#if (dataval) == "">
+				<textarea name="${ctrlNameId}" id="${ctrlNameId}" title="${hoverMsg}" 
+									style="border:1px solid #ff0000" onblur='removeBorderColor(this);' ${txthtmlsetting} rows="3" cols="50" >${dataval?html}</textarea>
+			<#else>
+				<textarea name="${ctrlNameId}" id="${ctrlNameId}" title="${hoverMsg}" ${txthtmlsetting} style="border:1px solid #cccccc" onchange='removeBorderColor(this);' rows="3" cols="50">${dataval?html}</textarea>
+			</#if>
+		<#else>
+			<textarea name="${ctrlNameId}" id="${ctrlNameId}" title="${hoverMsg}" ${txthtmlsetting} style="border:1px solid #cccccc" rows="3" cols="50">${dataval?html}</textarea>
+		</#if>
+	</#if>
+</#macro>
+
+
+<#macro formDropDownWONameIdWithChildVoEdd questionMap fieldName ctrlNameId baseVo listVo arrayIndex voFieldName htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+		<#if questionMap[fieldName].iconInfoDesc ??>
+			<#assign hoverMsg= questionMap[fieldName].iconInfoDesc/>
+		<#else>
+			<#assign hoverMsg= questionMap[fieldName].formLabel/>
+		</#if>
+		<#if baseVo??>
+			<#if baseVo[listVo]??>
+				<#local dataVoArr = baseVo[listVo] />
+				<#if dataVoArr[arrayIndex]??>
+					<#local finalDataVo = dataVoArr[arrayIndex] />
+					<#assign dataval = getData(finalDataVo, voFieldName) />		
+				<#else>
+					<#assign dataval = "" />
+				</#if>
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<#if  questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y">
+			<#if (dataval) == "">
+				<textarea name="${ctrlNameId}" id="${ctrlNameId}" title="${hoverMsg}" 
+									style="border:1px solid #ff0000" onblur='removeBorderColor(this);' ${txthtmlsetting} rows="3" cols="50">${dataval?html}</textarea>
+			<#else>
+				<textarea name="${ctrlNameId}" id="${ctrlNameId}" title="${hoverMsg}" ${txthtmlsetting} style="border:1px solid #cccccc" onchange='removeBorderColor(this);' rows="3" cols="50">${dataval?html}</textarea>
+			</#if>
+		<#else>
+			<textarea name="${ctrlNameId}" id="${ctrlNameId}" title="${hoverMsg}" ${txthtmlsetting} style="border:1px solid #cccccc" rows="3" cols="50">${dataval?html}</textarea>
+		</#if>
+	</#if>
+</#macro>
+
+
+<#macro formMultiSelectWONameIdList questionMap fieldName fieldControlId finalDataVo voFieldName pckListData htmlsetting>
+	<#if questionMap[fieldName] ??>
+				<#assign dataval = getData(finalDataVo, voFieldName) />	
+				<#assign pckListDataVal = finalDataVo[pckListData] />	
+		<@formMultiSelectMini questionMap fieldName dataval fieldControlId pckListDataVal htmlsetting/>
+	</#if>
+</#macro>
+<#macro formMultiSelectComboBoxList questionMap fieldName fieldValue finalDataVo voFieldName pckListData vopickList modelId htmlsetting>
+	<#if questionMap[fieldName] ??>
+				 <#assign pckListSourceData = finalDataVo[pckListData] />
+				 <#assign pckListTargetData = finalDataVo[vopickList] />
+		<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+		<#if questionMap[fieldName].iconInfoDesc ??>
+			<#assign hoverMsg= questionMap[fieldName].iconInfoDesc/>
+		<#else>
+			<#assign hoverMsg= questionMap[fieldName].formLabel/>
+		</#if>
+	<#assign dataval = getArrayData(finalDataVo,voFieldName) />
+	
+	  <div class='select_container'>
+			<div class='panel'>
+				<#if questionMap[fieldName].isMandatory == "Y" && !dataval?has_content>
+				  <span title="${hoverMsg}"><select multiple="multiple" id="from_${fieldValue}" name="${fieldValue}" ${txthtmlsetting} 
+								 class="comboboxselect">
+				<#else>
+					<span title="${hoverMsg}"><select multiple="multiple" id="from_${fieldValue}" name="${fieldValue}" ${txthtmlsetting} class="comboboxselect" >
+				</#if>	
+				<#if pckListSourceData?has_content>	
+					<#list pckListSourceData as pickList>
+						<#assign isSelected = dataval?seq_contains(pickList.code)>
+						<option  value="${pickList.code}">${pickList.pickListDesc}</option>
+					</#list>
+				</#if>
+			    </select></span>
+			 </div> 
+			 
+			 <div class='panel' style="margin-top: 10%;">
+			 	<input name="" type="button" class="bbutton" value=">>" onclick="moveall('from_${fieldValue}', 'to_${fieldValue}', 'false')"><div class='clear'></div><br />
+		        <input name="" type="button"  class="bbutton" value=">" onclick="moveto('from_${fieldValue}', 'to_${fieldValue}')"><div class='clear'></div><br />
+		        <input name="" type="button" class="bbutton" value="<" onclick="movefrom('to_${fieldValue}', 'from_${fieldValue}')"><div class='clear'></div><br />
+		        <input name="" type="button" class="bbutton" value="<<" onclick="moveall('to_${fieldValue}', 'from_${fieldValue}', 'true')"><div class='clear'></div> 
+		      </div>
+		    
+		   <div class='panel'>
+			<#if questionMap[fieldName].isMandatory == "Y" && !dataval?has_content>
+			  <span title="${hoverMsg}"><select multiple="multiple" id="to_${fieldValue}" name="${fieldValue}" ${txthtmlsetting} 
+							 class="comboboxselect">
+			<#else>
+				<span title="${hoverMsg}"><select multiple="multiple" id="to_${fieldValue}" name="${fieldValue}" ${txthtmlsetting} class="comboboxselect">
+			</#if>	
+			<#if pckListTargetData?has_content>	
+				<#list pckListTargetData as pickList>
+					<option  value="${pickList.code}">${pickList.pickListDesc}</option>
+				</#list>
+			</#if>
+		    </select></span>
+		 </div> 
+		 <br /> 
+		 <div style="margin-top: 40%;">
+		 	<table width="100%">
+		 		<tr>
+					<td align="right">
+					<#if questionMap[fieldName].isMandatory??>
+					<#assign mandFlag=questionMap[fieldName].isMandatory>
+					</#if>
+						<a href="#" class="bbutton" id="saveCmtBtn" onclick="saveMultiselection('to_${fieldValue}','${fieldValue}', '${modelId}','${mandFlag}');">Submit</a>
+						<a href="#" class="bbutton" id="cancelCmtBtn" onclick="cancelMultiselection('${modelId}');">Cancel</a>
+					</td>
+				</tr>
+		 </table> 
+		 </div>
+		                                 
+	 </div> 
+		    
+
+	</#if>
+</#macro>
+
+
+
+<#macro formMultiSelectWONameIdWithChildVo questionMap fieldName dataVo childVo voFieldName pckListData htmlsetting>
+	<#if questionMap[fieldName] ??>
+		<#if dataVo??>
+			<#if dataVo[childVo] ??>
+				<#local finalDataVo = dataVo[childVo] />
+				<#assign dataval = getData(finalDataVo, voFieldName) />	
+				<#assign pckListDataVal = finalDataVo[pckListData] />
+				<#assign dataval = getArrayData(finalDataVo,voFieldName) />	
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@formMultiSelectMini questionMap fieldName dataval voFieldName pckListDataVal htmlsetting/>
+	</#if>
+</#macro>
+
+<#macro formMultiSelectComboBoxWithChildVo questionMap fieldName dataVo childVo fieldValue pckListData vopickList modelId alrtMsg htmlsetting>
+	<#if questionMap[fieldName] ??>
+		<#if dataVo??>
+			<#if dataVo[childVo] ??>
+				<#local finalDataVo = dataVo[childVo] />
+				 <#assign pckListSourceData = finalDataVo[pckListData] />
+				 <#assign pckListTargetData = finalDataVo[vopickList] />
+				 
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+		<#if questionMap[fieldName].iconInfoDesc ??>
+			<#assign hoverMsg= questionMap[fieldName].iconInfoDesc/>
+		<#else>
+			<#assign hoverMsg= questionMap[fieldName].formLabel/>
+		</#if>
+	<#assign dataval = getArrayData(finalDataVo,fieldValue) />
+	 <#assign alertMsg = getArrayData(finalDataVo,alrtMsg) />
+	  <div class='select_container'>
+			<div class='panel'>
+				<#if questionMap[fieldName].isMandatory == "Y" && !dataval?has_content>
+				 <span title="${hoverMsg}"> <select multiple="multiple" id="from_${fieldValue}" name="${fieldValue}" ${txthtmlsetting} 
+								 class="comboboxselect">
+				<#else>
+					<span title="${hoverMsg}"><select multiple="multiple" id="from_${fieldValue}" name="${fieldValue}" ${txthtmlsetting} class="comboboxselect" >
+				</#if>	
+				<#if pckListSourceData?has_content>	
+					<#list pckListSourceData as pickList>
+						<#assign isSelected = dataval?seq_contains(pickList.code)>
+						<option  value="${pickList.code}">${pickList.pickListDesc}</option>
+					</#list>
+				</#if>
+			    </select></span>
+			 </div> 
+			 
+			 <div class='panel' style="margin-top: 10%;">
+		        <input name="" type="button"  class="bbutton" value=">" onclick="movetoForEddCountry('from_${fieldValue}', 'to_${fieldValue}','${alertMsg}')"><div class='clear'></div><br />
+		        <input name="" type="button" class="bbutton" value="<" onclick="movefrom('to_${fieldValue}', 'from_${fieldValue}')"><div class='clear'></div><br />
+		        <input name="" type="button" class="bbutton" value="<<" onclick="moveall('to_${fieldValue}', 'from_${fieldValue}', 'true')"><div class='clear'></div> 
+		      </div>
+		    
+		   <div class='panel'>
+			<#if questionMap[fieldName].isMandatory == "Y" && !dataval?has_content>
+			  <span title="${hoverMsg}"><select multiple="multiple" id="to_${fieldValue}" name="${fieldValue}" ${txthtmlsetting} 
+							 class="comboboxselect" >
+			<#else>
+				<span title="${hoverMsg}"><select multiple="multiple" id="to_${fieldValue}" name="${fieldValue}" ${txthtmlsetting} class="comboboxselect">
+			</#if>	
+			<#if pckListTargetData?has_content>	
+				<#list pckListTargetData as pickList>
+					<option  value="${pickList.code}">${pickList.pickListDesc}</option>
+				</#list>
+			</#if>
+		    </select></span>
+		 </div> 
+		 <br /> 
+		 <div style="margin-top: 40%;">
+		 	<table width="100%">
+		 		<tr>
+					<td align="right">
+						<a href="#" class="bbutton" id="saveCmtBtn" onclick="saveEddMultiselection('to_${fieldValue}','${fieldValue}', '${modelId}','${alertMsg}');">Submit</a>
+						<a href="#" class="bbutton" id="cancelCmtBtn" onclick="cancelMultiselection('${modelId}');">Cancel</a>
+					</td>
+				</tr>
+		 </table> 
+		 </div>
+		                                 
+	 </div> 
+		    
+
+	</#if>
+</#macro>
+
+<#macro formMultiSelectMini questionMap fieldName dataval fieldValue pckListData htmlsetting="">
+   <#if questionMap[fieldName] ??>
+    <#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+	<#if questionMap[fieldName].iconInfoDesc ??>
+			<#assign hoverMsg= questionMap[fieldName].iconInfoDesc/>
+		<#else>
+			<#assign hoverMsg= questionMap[fieldName].formLabel/>
+	</#if>
+	   <#if  questionMap[fieldName].isMandatory ?? &&  questionMap[fieldName].isMandatory == "Y" && !dataval?has_content>
+			<span title="${hoverMsg}"><select multiple="multiple" id="${fieldValue}" name="${fieldValue}" ${txthtmlsetting}  class="comboboxselect" style="height:100px;border:1px solid #ff0000" 
+					onblur="highlightMandatoryField(this , '${questionMap[fieldName].isMandatory}')">
+		<#else>
+			<span title="${hoverMsg}"><select multiple="multiple" id="${fieldValue}" name="${fieldValue}" ${txthtmlsetting} class="comboboxselect" style="height:100px;" onblur="highlightMandatoryField(this , '${questionMap[fieldName].isMandatory}')">
+		</#if>	
+			
+			<#list pckListData as pickList>
+				<#assign isSelected = dataval?seq_contains(pickList.code)>
+				<option  value="${pickList.code}">${pickList.pickListDesc}</option>
+			</#list>
+		</select></span>
+	</#if>
+</#macro>
+
+<#macro formMultiSelect questionMap fieldName dataVo fieldValue pckListData htmlsetting="">
+   <#if questionMap[fieldName] ??>
+    <#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+    <#if questionMap[fieldName].iconInfoDesc ??>
+			<#assign hoverMsg= questionMap[fieldName].iconInfoDesc/>
+		<#else>
+			<#assign hoverMsg= questionMap[fieldName].formLabel/>
+	</#if>
+	<#assign dataval = getArrayData(dataVo,fieldValue) />
+	   <#if  questionMap[fieldName].isMandatory ?? &&  questionMap[fieldName].isMandatory == "Y" && !dataval?has_content>
+			<span title="${hoverMsg}"><select multiple="multiple" id="${fieldValue}" name="${fieldValue}" ${txthtmlsetting}  class="comboboxselect" style="border:1px solid #ff0000" 
+					onblur="highlightMandatoryField(this , '${questionMap[fieldName].isMandatory}')">
+		<#else>
+			<span title="${hoverMsg}"><select multiple="multiple" id="${fieldValue}" name="${fieldValue}" ${txthtmlsetting} class="comboboxselect" onblur="highlightMandatoryField(this , '${questionMap[fieldName].isMandatory}')">
+		</#if>	
+			
+			<#list pckListData as pickList>
+				<#assign isSelected = dataval?seq_contains(pickList.code)>
+				<option  value="${pickList.code}">${pickList.pickListDesc}</option>
+			</#list>
+		</select></span>
+	</#if>
+</#macro>
+
+<#macro formMultiSelectValuesArr questionMap fieldName dataval fieldValue fieldId pckListData htmlsetting="">
+   <#if questionMap[fieldName] ??>
+    <#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+    <#if questionMap[fieldName].iconInfoDesc ??>
+			<#assign hoverMsg= questionMap[fieldName].iconInfoDesc/>
+		<#else>
+			<#assign hoverMsg= questionMap[fieldName].formLabel/>
+	</#if>
+	   <#if  questionMap[fieldName].isMandatory ?? &&  questionMap[fieldName].isMandatory == "Y" && ( !(dataval ??) || dataval[0] == "" || !(dataval?has_content) ) >
+	   		
+			<span title="${hoverMsg}"><select multiple="multiple" name="${fieldValue}"  id="${fieldId}" ${txthtmlsetting}  class="comboboxselect" style="border:1px solid #ff0000;height:100px;" 
+					onblur="highlightMandatoryField(this , '${questionMap[fieldName].isMandatory}')">
+		<#else>
+			<span title="${hoverMsg}"><select multiple="multiple" name="${fieldValue}" id="${fieldId}" ${txthtmlsetting} class="comboboxselect" style="height:100px;" onblur="highlightMandatoryField(this , '${questionMap[fieldName].isMandatory}')">
+		</#if>	
+			
+			<#list pckListData as pickList>
+			
+				<#assign isSelected = (dataval?seq_contains(pickList.code))?string>
+				 <#if isSelected ?? && isSelected=="true">
+					<option  value="${pickList.code}" selected="selected" >${pickList.pickListDesc}</option>
+				 <#else>
+				 	<option  value="${pickList.code}" >${pickList.pickListDesc}</option>
+				 </#if>
+			</#list>
+		</select></span>
+	</#if>
+</#macro>
+
+<#macro formMultiSelectComboBox questionMap fieldName dataVo fieldValue pckListSourceData pckListTargetData modelId htmlsetting="">
+   <#if questionMap[fieldName] ??>
+    <#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+    <#if questionMap[fieldName].iconInfoDesc ??>
+			<#assign hoverMsg= questionMap[fieldName].iconInfoDesc/>
+		<#else>
+			<#assign hoverMsg= questionMap[fieldName].formLabel/>
+	</#if>
+	<#assign dataval = getArrayData(dataVo,fieldValue) />
+	
+	  <div class='select_container'>
+			<div class='panel'>
+				<#if questionMap[fieldName].isMandatory == "Y" && !dataval?has_content>
+				  <span title="${hoverMsg}"><select multiple="multiple" id="from_${fieldValue}" name="${fieldValue}" ${txthtmlsetting} 
+								 class="comboboxselect">
+				<#else>
+					<span title="${hoverMsg}"><select multiple="multiple" id="from_${fieldValue}" name="${fieldValue}" ${txthtmlsetting} class="comboboxselect" >
+				</#if>	
+				<#if pckListSourceData?has_content>	
+					<#list pckListSourceData as pickList>
+						<#assign isSelected = dataval?seq_contains(pickList.code)>
+						<option  value="${pickList.code}">${pickList.pickListDesc}</option>
+					</#list>
+				</#if>
+			    </select></span>
+			 </div> 
+			 
+			 <div class='panel' style="margin-top: 10%;">
+			 	<input name="" type="button" class="bbutton" value=">>" onclick="moveall('from_${fieldValue}', 'to_${fieldValue}', 'false')"><div class='clear'></div><br />
+		        <input name="" type="button"  class="bbutton" value=">" onclick="moveto('from_${fieldValue}', 'to_${fieldValue}')"><div class='clear'></div><br />
+		        <input name="" type="button" class="bbutton" value="<" onclick="movefrom('to_${fieldValue}', 'from_${fieldValue}')"><div class='clear'></div><br />
+		        <input name="" type="button" class="bbutton" value="<<" onclick="moveall('to_${fieldValue}', 'from_${fieldValue}', 'true')"><div class='clear'></div> 
+		      </div>
+		    
+		   <div class='panel'>
+			<#if questionMap[fieldName].isMandatory == "Y" && !dataval?has_content>
+			  <span title="${hoverMsg}"><select multiple="multiple" id="to_${fieldValue}" name="${fieldValue}" ${txthtmlsetting} 
+							 class="comboboxselect">
+			<#else>
+				<span title="${hoverMsg}"><select multiple="multiple" id="to_${fieldValue}" name="${fieldValue}" ${txthtmlsetting} class="comboboxselect">
+			</#if>	
+			<#if pckListTargetData?has_content>	
+				<#list pckListTargetData as pickList>
+					<option  value="${pickList.code}">${pickList.pickListDesc}</option>
+				</#list>
+			</#if>
+		    </select></span>
+		 </div> 
+		 <br /> 
+		 <div style="margin-top: 40%;">
+		 	<table width="100%">
+		 		<tr>
+					<td align="right">
+					<#if questionMap[fieldName].isMandatory??>
+					<#assign mandFlag=questionMap[fieldName].isMandatory>
+					</#if>
+						<a href="#" class="bbutton" id="saveCmtBtn" onclick="saveMultiselection('to_${fieldValue}','${fieldValue}', '${modelId}','${mandFlag}');">Submit</a>
+						<a href="#" class="bbutton" id="cancelCmtBtn" onclick="cancelMultiselection('${modelId}');">Cancel</a>
+					</td>
+				</tr>
+		 </table> 
+		 </div>
+		                                 
+	 </div> 
+		    
+	</#if>
+</#macro>
+
+<#macro checkbox questionMap fieldName dataVo fieldValue htmlsetting="">
+    <#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+	<#assign dataval = getData(dataVo,fieldValue) />
+    <#assign isSelected = dataval?? && dataval?string=="true">
+	<input type="hidden" name="_${fieldValue}" value="on"/>
+	<div>			
+		<input type="checkbox" id="${fieldValue}" name="${fieldValue}" 
+		   <#if isSelected?? && isSelected?c == 'true'> checked="checked"</#if>  ${txthtmlsetting} />	
+	</div>
+</#macro>
+
+
+<#macro displayNumberField questionMap fieldName dataVo txtName htmlsetting="">
+	<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+	<#if questionMap[fieldName].iconInfoDesc ??>
+			<#assign hoverMsg= questionMap[fieldName].iconInfoDesc/>
+		<#else>
+			<#assign hoverMsg= questionMap[fieldName].formLabel/>
+	</#if>
+	<#assign dataval = getData(dataVo,txtName) />
+	<#if questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y">
+		<#if (dataval) == "">
+			<INPUT TYPE="text" name="${txtName}" id="${txtName}"  value="${dataval}"
+									 ${txthtmlsetting} 
+									 title="${hoverMsg}" style="border:1px solid #ff0000" 
+									 onchange="highlightMandatoryField(this , '${questionMap[fieldName].isMandatory}')"/>
+		<#else>
+		   	<INPUT TYPE="text" name="${txtName}" id="${txtName}"  value="${dataval}" 
+									 onchange="highlightMandatoryField(this , '${questionMap[fieldName].isMandatory}')" title="${hoverMsg}" ${txthtmlsetting} />					 
+		</#if>
+	<#else>
+			<INPUT TYPE="text" name="${txtName}" id="${txtName}"  value="${dataval}" 
+									 title="${hoverMsg}" ${txthtmlsetting} />
+	</#if>
+</#macro>
+<#macro formRadioButtonWithIndex questionMap fieldName ctrlNameId arrayIndex dataval pckListData htmlsetting="">
+	<@displayRadioButtonTd questionMap fieldName ctrlNameId+arrayIndex dataval pckListData "" htmlsetting/>
+</#macro>
+
+<#macro formRadioButtonTdWithChildVo questionMap fieldName ctrlNameId baseVo listVo arrayIndex voFieldName pckListData onclickFucn htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+		<#if baseVo??>
+			<#if baseVo[listVo]??>
+				<#local dataVoArr = baseVo[listVo] />
+				<#if dataVoArr[arrayIndex]??>
+					<#local finalDataVo = dataVoArr[arrayIndex] />
+					<#assign dataval = getData(finalDataVo, voFieldName) />		
+				<#else>
+					<#assign dataval = "" />
+				</#if>
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displayRadioButtonTd questionMap fieldName ctrlNameId dataval pckListData onclickFucn htmlsetting/>
+	</#if>
+</#macro>
+
+<#macro formRadioButtonTdWithList questionMap fieldName ctrlNameId baseVo arrayIndex voFieldName pckListData onclickFucn htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+		<#if baseVo??>
+			<#if baseVo[arrayIndex]??>
+				<#local dataVo = baseVo[arrayIndex] />
+				<#assign dataval = getData(dataVo, voFieldName) />		
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displayRadioButtonTd questionMap fieldName ctrlNameId dataval pckListData onclickFucn htmlsetting/>
+	</#if>
+</#macro>
+
+<#macro formRadioButtonTd questionMap fieldName ctrlNameId baseVo voFieldName pckListData onclickFucn htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+		<#if onclickFucn??> <#assign onclickFunction = onclickFucn/><#else> <#assign onclickFunction = "" /></#if>
+		<#if baseVo??>
+			<#assign dataval = getData(baseVo, voFieldName) />		
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displayRadioButtonTd questionMap fieldName ctrlNameId dataval pckListData onclickFunction htmlsetting/>
+	</#if>
+</#macro>
+<!-- 
+Macro to display the data for the question. This displays the data in text field with TD.
+This can be used for editable fields that uses textbox.
+Input fields for the macro: 
+		fieldName: Questionaire field name (used to check whether the field is mandatory or not)
+		txtName: name of the field in the data VO
+		tdWidth: Width of the TD
+		align: Horizontal Align for the TD 
+-->
+<#macro formTextTD questionMap fieldName dataVo txtName tdWidth align htmlsetting="">
+	<#assign width="width" />
+	<#assign align="align" />
+	<#if questionMap[fieldName]??>
+		<TD width="${tdWidth}" align="${align}">
+			formTextAlone questionMap fieldName dataVo txtName htmlsetting
+		</TD>
+	</#if>
+</#macro>
+
+<!-- 
+Macro to display the lable and data for the question. 
+This displays the Questionair in TD and data in a TD with out textbox in a single row.
+This can be used to display source mapped field in a single row.
+Input fields for the macro: 
+		fieldName: Questionaire field name (used to check whether the field is mandatory or not)
+		txtName: name of the field in the data VO
+		tdWidth: Width of the TD
+		align: Horizontal Align for the TDs
+-->
+<#macro formLabelDataWithTr questionMap fieldName txtName tdWidth tdalign htmlsetting="">
+	<#if questionMap[fieldName]??>
+		<TR>
+			<#assign width="width" />
+			<#assign align="align" />
+			<#if htmlsetting??> <#assign htmlSetting = htmlsetting/><#else> <#assign htmlSetting = "" /></#if>
+			<@formLabelTD questionMap fieldName width=tdWidth align=tdalign />
+			<@formDataTD questionMap fieldName txtName htmlSetting />
+		</TR>
+	</#if>
+</#macro>
+
+<!-- 
+Macro to display the lable and data for the question. 
+This displays the Questionair in TD and data in a TD with textbox in a single row.
+This can be used for editable fields that uses textbox.
+Input fields for the macro: 
+		fieldName: Questionaire field name (used to check whether the field is mandatory or not)
+		txtName: name of the field in the data VO
+		tdWidth: Width of the TD
+		align: Horizontal Align for the TDs
+-->
+<#macro formLabelTextWithTr questionMap fieldName txtName tdWidth tdalign htmlsetting="">
+	<#if questionMap[fieldName]??>
+		<TR>
+			<#if htmlsetting??> <#assign htmlSetting = htmlsetting/><#else> <#assign htmlSetting = "" /></#if>
+			<#assign width="width" />
+			<#assign align="align" />
+			<@formLabelTD questionMap fieldName width=tdWidth align=tdalign/>
+			<@formTextTD questionMap fieldName txtName tdWidth align htmlSetting/>
+		</TR>
+	</#if>
+</#macro>
+
+<!-- 
+Macro to display the lable and data for the question. 
+This displays the Questionair in TD and data in a TD with textbox.
+This can be used for editable fields that uses textbox.
+This gives the TD output alone with out TR.
+	eg: <TD 
+Input fields for the macro: 
+		fieldName: Questionaire field name (used to check whether the field is mandatory or not)
+		txtName: name of the field in the data VO
+		tdWidth: Width of the TD
+		align: Horizontal Align for the TDs
+		htmlsetting : additional html setting for the txtbox like, max length etc..
+-->
+<#macro formLabelTextWithTDAlone questionMap fieldName dataVo txtName tdWidth tdalign htmlsetting="">
+	<#if questionMap[fieldName]??>
+		 <#if htmlsetting??> <#assign htmlSetting = htmlsetting/><#else> <#assign htmlSetting = "" /></#if>
+		 <#assign width="width" />
+		<#assign align="align" />
+		 
+		<@formLabelTD questionMap fieldName width=tdWidth align=tdalign/>
+		<@formTextTD questionMap fieldName dataVo txtName tdWidth align htmlSetting/>
+	</#if>
+</#macro>
+
+
+<#macro formLabelDataWithTDAlone questionMap fieldName dataVo txtName tdWidth tdalign htmlsetting="">
+	<#if questionMap[fieldName]??>
+		<#if htmlsetting??> <#assign htmlSetting = htmlsetting/><#else> <#assign htmlSetting = "" /></#if>
+		<#assign width="width" />
+		<#assign align="align" />
+		<@formLabelTD questionMap fieldName width=tdWidth align=tdalign htmlsetting/>
+		<@formDataTD questionMap fieldName dataVo txtName width=tdWidth align=tdalign htmlSetting/>
+	</#if>
+</#macro>
+
+<#macro formTextWONameIdFromArrrayVoWithChildVo questionMap fieldName ctrlNameId baseVo listVo arrayIndex childVo voFieldName htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if baseVo??>
+			<#if baseVo[listVo]??>
+				<#local dataVoArr = baseVo[listVo] />
+				<#if dataVoArr[arrayIndex]??>
+					<#if dataVoArr[arrayIndex][childVo]??>
+						<#local finalDataVo = dataVoArr[arrayIndex][childVo] />
+						<#assign dataval = getData(finalDataVo, voFieldName) />		
+					<#else>
+						<#assign dataval = "" />
+					</#if>
+				<#else>
+					<#assign dataval = "" />
+				</#if>
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displayTextField questionMap fieldName ctrlNameId dataval htmlsetting/>
+	</#if>
+</#macro>
+
+<#macro formLabelAloneWithConditionalMand questionMap fieldName mandatoryLableId>
+	<#if questionMap[fieldName] ??>
+		<#if  questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y"><font id="${mandatoryLableId}">&nbsp;&nbsp;</font><#else>&nbsp;&nbsp;</#if> ${questionMap[fieldName].formLabel}
+	</#if>
+</#macro>
+
+<#macro formTextWONameIdFromArrOfChildWithConditionalMand questionMap fieldName ctrlNameId baseVo listVo arrayIndex childVo voFieldName onblurFunc htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if baseVo??>
+			<#if baseVo[listVo]??>
+				<#local dataVoArr = baseVo[listVo] />
+				<#if dataVoArr[arrayIndex]??>
+					<#if dataVoArr[arrayIndex][childVo]??>
+						<#local finalDataVo = dataVoArr[arrayIndex][childVo] />
+						<#assign dataval = getData(finalDataVo, voFieldName) />		
+					<#else>
+						<#assign dataval = "" />
+					</#if>
+				<#else>
+					<#assign dataval = "" />
+				</#if>
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displayTextFieldWithConditionalMand questionMap fieldName ctrlNameId dataval onblurFunc htmlsetting/>
+	</#if>
+</#macro>
+<#macro formTextWONameIdFromArrWithConditionalMand questionMap fieldName ctrlNameId baseVo listVo arrayIndex voFieldName onblurFunc htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if baseVo??>
+			<#if baseVo[listVo]??>
+				<#local dataVoArr = baseVo[listVo] />
+				<#if dataVoArr[arrayIndex]??>
+					<#local finalDataVo = dataVoArr[arrayIndex] />
+					<#assign dataval = getData(finalDataVo, voFieldName) />		
+				<#else>
+					<#assign dataval = "" />
+				</#if>
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displayTextFieldWithConditionalMand questionMap fieldName ctrlNameId dataval onblurFunc htmlsetting/>
+	</#if>
+</#macro>
+<#macro formTextWONameIdFromArrrayVo questionMap fieldName ctrlNameId baseVo listVo arrayIndex voFieldName htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if baseVo??>
+			<#if baseVo[listVo]??>
+			<#local dataVoArr = baseVo[listVo] />
+				<#if dataVoArr[arrayIndex]??>
+					<#local finalDataVo = dataVoArr[arrayIndex] />
+					<#assign dataval = getData(finalDataVo, voFieldName) />		
+				<#else>
+					<#assign dataval = "" />
+				</#if>
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displayTextField questionMap fieldName ctrlNameId dataval htmlsetting/>
+	</#if>
+</#macro>
+<#macro displayTextFieldWithConditionalMand questionMap fieldName ctrlNameId dataval onblurFunc htmlsetting="">
+	<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+	<#if questionMap[fieldName].iconInfoDesc ??>
+			<#assign hoverMsg= questionMap[fieldName].iconInfoDesc/>
+		<#else>
+			<#assign hoverMsg= questionMap[fieldName].formLabel/>
+	</#if>
+	<#if questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y">
+		
+		<#if !(dataval ??) || ( dataval ?? && !(dataval?is_number) && (dataval) == "" ) >
+			<INPUT TYPE="text" name="${ctrlNameId}" id="${ctrlNameId}"  value="${dataval?html}"
+									 ${txthtmlsetting} 
+									 title="${hoverMsg}" style="border:1px solid #cccccc" 
+									 onblur='${onblurFunc}'/>
+		<#else>
+			<INPUT TYPE="text" name="${ctrlNameId}" id="${ctrlNameId}" value="${dataval?html}" title="${hoverMsg}"
+									style="border:1px solid #cccccc" ${txthtmlsetting} />
+		</#if>
+	<#else>
+			<INPUT TYPE="text" name="${ctrlNameId}" id="${ctrlNameId}"  value="${dataval?html}" style="border:1px solid #cccccc"
+									 title="${hoverMsg}" ${txthtmlsetting} />
+	</#if>
+</#macro>
+
+<#macro formSelectWONameIdFromArrrayVoWithChildVo questionMap fieldName ctrlNameId baseVo listVo arrayIndex childVo voFieldName pckListData htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if baseVo??>
+			<#if baseVo[listVo]??>
+				<#local dataVoArr = baseVo[listVo] />
+				<#if dataVoArr[arrayIndex]??>
+					<#if dataVoArr[arrayIndex][childVo]??>
+						<#local finalDataVo = dataVoArr[arrayIndex][childVo] />
+						<#assign dataval = getData(finalDataVo, voFieldName) />		
+					<#else>
+						<#assign dataval = "" />
+					</#if>
+				<#else>
+					<#assign dataval = "" />
+				</#if>
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displaySelectDropdown questionMap fieldName ctrlNameId dataval pckListData htmlsetting/>
+	</#if>
+</#macro>
+
+<#macro listAttributes htmlsetting="">
+	<#if htmlSetting?size != 0>
+		<#if htmlSetting?is_sequence>
+			<#list htmlSetting as attrName>
+				${attrName?index} = attrName
+			</#list>
+		<#else>
+			<#list htmlSetting as attrName>
+	  			${attrName}
+	  		</#list>
+	  	</#if>
+	 </#if>
+</#macro>
+
+<#function getData dataVo fieldName>
+	<#local dataval = "" />
+	<#if dataVo??>
+		<#if dataVo[fieldName]??> <#local dataval = dataVo[fieldName]/><#else> <#local dataval = "" /></#if>
+	<#else>
+		<#local dataval = "" />
+	</#if>
+	<#return dataval>
+</#function>
+
+<#function getDataAddtionalAddr dataVo fieldName>
+	<#local dataval = "" />
+	<#if dataVo??>
+		<#local dataval = fieldName/>
+	<#else>
+		<#local dataval = "" />
+	</#if>
+	<#return dataval>
+</#function>
+
+<#function getArrayData dataVo fieldName>
+	<#local dataval = [] />
+	<#if dataVo??>
+		<#if dataVo[fieldName]??> <#local dataval = dataVo[fieldName]/><#else> <#local dataval = [] /></#if>
+	<#else>
+		<#local dataval = [] />
+	</#if>
+	<#return dataval>
+</#function>
+
+
+<#macro displayRadioButtonTd questionMap fieldName ctrlNameId dataval pckListData onclickFucn htmlsetting>
+	<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+	<#if questionMap[fieldName].iconInfoDesc ??>
+			<#assign hoverMsg= questionMap[fieldName].iconInfoDesc/>
+		<#else>
+			<#assign hoverMsg= questionMap[fieldName].formLabel/>
+	</#if>
+	<#if dataval == "">
+		<td ${txthtmlsetting}>
+			<#if questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y">
+			<#assign removeBorderWhenOnclick= 'removeBorderToRadioButtonWhenClick(div${ctrlNameId});'/>
+			<#if onclickFucn??> <#assign onclickFunction = removeBorderWhenOnclick+onclickFucn/><#else> <#assign onclickFunction = removeBorderWhenOnclick /></#if>
+				<div id="div${ctrlNameId}" style="border:1px solid #ff0000;width:120px;">
+			<#else>
+			<#assign onclickFunction = onclickFucn />
+			</#if>
+				<#list pckListData as pickList>
+					<INPUT TYPE="radio" name="${ctrlNameId}" id="${ctrlNameId}${pickList.code}" value="${pickList.pickListDesc}" title="${hoverMsg}" onclick="${onclickFunction}" ${txthtmlsetting}/>${pickList.pickListDesc}
+				</#list>
+			<#if questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y">
+				</div>
+			</#if>
+		</td>
+	<#else>
+		<td ${txthtmlsetting}>
+			<#if questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y">
+			<#assign removeBorderWhenOnclick= 'removeBorderToRadioButtonWhenClick(div${ctrlNameId});'/>
+			<#if onclickFucn??> <#assign onclickFunction = removeBorderWhenOnclick+onclickFucn/><#else> <#assign onclickFunction = removeBorderWhenOnclick /></#if>
+				<div id="div${ctrlNameId}">
+			<#else>
+			<#assign onclickFunction = onclickFucn />
+			</#if>
+			<#list pckListData as pickList>
+				<#if ((dataval) == pickList.pickListDesc) || ((dataval) == pickList.code ) || ((dataval) == 'Y' && pickList.pickListDesc=='Yes') || ((dataval) == 'N' && pickList.pickListDesc=='No')>
+					<INPUT TYPE="radio" name="${ctrlNameId}" id="${ctrlNameId}${pickList.code}" value="${pickList.pickListDesc}" checked="checked" title="${hoverMsg}"  onclick="${onclickFunction}" ${txthtmlsetting}/>${pickList.pickListDesc}
+				<#else>
+					<INPUT TYPE="radio" name="${ctrlNameId}" id="${ctrlNameId}${pickList.code}" value="${pickList.pickListDesc}" title="${hoverMsg}" onclick="${onclickFunction}" ${txthtmlsetting}/>${pickList.pickListDesc}
+				</#if>
+			</#list>
+			<#if questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y">
+				</div>
+			</#if>
+		</td>
+	</#if>
+</#macro>
+
+<#macro displayRadioButtonCvr questionMap fieldName ctrlNameId dataval pckListData onclickFucn htmlsetting="">
+	<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+	<#if questionMap[fieldName].iconInfoDesc ??>
+			<#assign hoverMsg= questionMap[fieldName].iconInfoDesc/>
+		<#else>
+			<#assign hoverMsg= questionMap[fieldName].formLabel/>
+	</#if>
+	<#if dataval == "">
+		<td ${txthtmlsetting}>
+			<#if questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y">
+			<#assign removeBorderWhenOnclick= 'removeBorderToRadioButtonWhenClick(div${ctrlNameId});'/>
+			<#if onclickFucn??> <#assign onclickFunction = removeBorderWhenOnclick+onclickFucn/><#else> <#assign onclickFunction = removeBorderWhenOnclick /></#if>
+				<div id="div${ctrlNameId}" style="border:1px solid #ff0000;width:200px;">
+			<#else>
+			<#assign onclickFunction = onclickFucn />
+			</#if>
+				<#list pckListData as pickList>
+					<INPUT TYPE="radio" name="${ctrlNameId}" id="${ctrlNameId}${pickList.code}" value="${pickList.pickListvalue}" title="${hoverMsg}" onclick="${onclickFunction}" />${pickList.pickListvalue}
+				</#list>
+			<#if questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y">
+				</div>
+			</#if>
+		</td>
+	<#else>
+		<td ${txthtmlsetting}>
+			<#if questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y">
+			<#assign removeBorderWhenOnclick= 'removeBorderToRadioButtonWhenClick(div${ctrlNameId});'/>
+			<#if onclickFucn??> <#assign onclickFunction = removeBorderWhenOnclick+onclickFucn/><#else> <#assign onclickFunction = removeBorderWhenOnclick /></#if>
+				<div id="div${ctrlNameId}">
+			<#else>
+			<#assign onclickFunction = onclickFucn />
+			</#if>
+			<#list pckListData as pickList>
+				<#if ((dataval) == pickList.pickListDesc ) || ((dataval) == 'Y' && pickList.pickListDesc=='Yes') || ((dataval) == 'N' && pickList.pickListDesc=='No')>
+					<INPUT TYPE="radio" name="${ctrlNameId}" id="${ctrlNameId}${pickList.code}" value="${pickList.pickListDesc}" checked="checked" title="${hoverMsg}"  onclick="${onclickFunction}" />${pickList.pickListDesc}
+				<#else>
+					<INPUT TYPE="radio" name="${ctrlNameId}" id="${ctrlNameId}${pickList.code}" value="${pickList.pickListDesc}" title="${hoverMsg}" onclick="${onclickFunction}"/>${pickList.pickListDesc}
+				</#if>
+			</#list>
+			<#if questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y">
+				</div>
+			</#if>
+		</td>
+	</#if>
+</#macro>
+
+<#macro displayRadioButtonEdd questionMap fieldName ctrlNameId dataval pckListData onclickFucn htmlsetting="">
+	<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+	<#if questionMap[fieldName].iconInfoDesc ??>
+			<#assign hoverMsg= questionMap[fieldName].iconInfoDesc/>
+		<#else>
+			<#assign hoverMsg= questionMap[fieldName].formLabel/>
+	</#if>
+	<#assign removeBorderWhenOnclick= 'removeBorderToRadioButtonWhenClick(div${ctrlNameId});'/>
+	<#if onclickFucn??> <#assign onclickFunction = removeBorderWhenOnclick+onclickFucn/><#else> <#assign onclickFunction = removeBorderWhenOnclick /></#if>
+	<#if dataval == "">
+			<#if questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y">
+			<div id="div${ctrlNameId}" style="border:1px solid #ff0000;width:360px;margin-top: -7px;height:20px;">
+			</#if>
+				<#list pckListData as pickList>
+					<INPUT TYPE="radio" name="${ctrlNameId}" id="${ctrlNameId}${pickList.code}" value="${pickList.pickListvalue}" title="${hoverMsg}" onclick="${onclickFunction}" />${pickList.pickListvalue}
+				</#list>
+			<#if questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y">
+			</div>
+			</#if>
+	
+	<#else>
+			<div id="div${ctrlNameId}">
+			<#list pckListData as pickList>
+				<#if ((dataval) == pickList.pickListDesc ) || ((dataval) == 'Y' && pickList.pickListDesc=='Yes') || ((dataval) == 'N' && pickList.pickListDesc=='No')>
+					<INPUT TYPE="radio" name="${ctrlNameId}" id="${ctrlNameId}${pickList.code}" value="${pickList.pickListDesc}" checked="checked" title="${hoverMsg}"  onclick="${onclickFunction}" />${pickList.pickListDesc}
+				<#else>
+					<INPUT TYPE="radio" name="${ctrlNameId}" id="${ctrlNameId}${pickList.code}" value="${pickList.pickListDesc}" title="${hoverMsg}" onclick="${onclickFunction}"/>${pickList.pickListDesc}
+				</#if>
+			</#list>
+			</div>
+	</#if>
+</#macro>
+
+<#macro displayTextFieldWithOnchange questionMap fieldName ctrlNameId dataval onchangefun htmlsetting="">
+	<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+	<#if questionMap[fieldName].iconInfoDesc ??>
+			<#assign hoverMsg= questionMap[fieldName].iconInfoDesc/>
+		<#else>
+			<#assign hoverMsg= questionMap[fieldName].formLabel/>
+	</#if>
+	<#if questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y">
+		<#assign removeBorderWhenOnchange= 'removeBorderColor(this);'/>
+		<#if onchangefun??> <#assign onChangeFunction = removeBorderWhenOnchange+onchangefun/><#else> <#assign onChangeFunction = removeBorderWhenOnchange /></#if>
+	<#else>
+		<#if onchangefun??> <#assign onChangeFunction = onchangefun/><#else> <#assign onChangeFunction = "" /></#if>
+	</#if>
+	<#if questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y">
+		
+		<#if !(dataval ??) || ( dataval ?? && !(dataval?is_number) && (dataval) == "" ) >
+			<INPUT TYPE="text" name="${ctrlNameId}" id="${ctrlNameId}"  value="${dataval?html}"
+									 ${txthtmlsetting} 
+									 title="${hoverMsg}" style="border:1px solid #ff0000" 
+									 onchange="${onChangeFunction}" />
+		<#else>
+			<INPUT TYPE="text" name="${ctrlNameId}" id="${ctrlNameId}" value="${dataval?html}" title="${hoverMsg}"
+									style="border:1px solid #cccccc" ${txthtmlsetting} onchange="${onChangeFunction}" />
+		</#if>
+	<#else>
+			<INPUT TYPE="text" name="${ctrlNameId}" id="${ctrlNameId}"  value="${dataval?html}" style="border:1px solid #cccccc"
+									 title="${hoverMsg}" ${txthtmlsetting} onchange="${onChangeFunction}" />
+	</#if>
+</#macro>
+
+<#macro displayTextField questionMap fieldName ctrlNameId dataval htmlsetting="">
+	<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+	<#if questionMap[fieldName].iconInfoDesc ??>
+			<#assign hoverMsg= questionMap[fieldName].iconInfoDesc/>
+		<#else>
+			<#assign hoverMsg= questionMap[fieldName].formLabel/>
+	</#if>
+	<#if questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y">
+		<#if !(dataval ??) || ( dataval ?? && !(dataval?is_number) && (dataval) == "" ) >
+			<INPUT TYPE="text" name="${ctrlNameId}" id="${ctrlNameId}"  value="${dataval?html}"
+									 ${txthtmlsetting} 
+									 title="${hoverMsg}" style="border:1px solid #ff0000" 
+									 onchange='removeBorderColor(this);'/>
+		<#else>
+			<INPUT TYPE="text" name="${ctrlNameId}" id="${ctrlNameId}" value="${dataval?html}" title="${hoverMsg}"
+									style="border:1px solid #cccccc" ${txthtmlsetting} onchange='removeBorderColor(this);'/>
+		</#if>
+	<#else>
+			<INPUT TYPE="text" name="${ctrlNameId}" id="${ctrlNameId}"  value="${dataval?html}" style="border:1px solid #cccccc"
+									 title="${hoverMsg}" ${txthtmlsetting} />
+	</#if>
+</#macro>
+
+<#macro displayTextAreaField questionMap fieldName ctrlNameId dataval isDisabled htmlsetting="">
+	<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+	<#if questionMap[fieldName].iconInfoDesc ??>
+			<#assign hoverMsg= questionMap[fieldName].iconInfoDesc/>
+		<#else>
+			<#assign hoverMsg= questionMap[fieldName].formLabel/>
+	</#if>
+	<#if  questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y">
+		<#if (dataval) == "">
+		    <textarea name="${ctrlNameId}" id="${ctrlNameId}" title="${hoverMsg}" ${txthtmlsetting} style="border:1px solid #ff0000" onchange='removeBorderColor(this);' rows="2" cols="50" ${isDisabled}>${dataval?html}</textarea>
+			
+		<#else>
+			<textarea name="${ctrlNameId}" id="${ctrlNameId}" title="${hoverMsg}" ${txthtmlsetting} style="border:1px solid #cccccc" onchange='removeBorderColor(this);' rows="2" cols="50" ${isDisabled}>${dataval?html}</textarea>
+		</#if>
+	<#else>
+		<textarea name="${ctrlNameId}" id="${ctrlNameId}" title="${hoverMsg}" ${txthtmlsetting} style="border:1px solid #cccccc" rows="2" cols="50" ${isDisabled}>${dataval?html}</textarea>
+	</#if>
+</#macro>
+
+<#macro displaySelectDropdown questionMap fieldName ctrlNameId dataval pckListData htmlsetting="">
+	<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+	<#if questionMap[fieldName].iconInfoDesc ??>
+			<#assign hoverMsg= questionMap[fieldName].iconInfoDesc/>
+		<#else>
+			<#assign hoverMsg= questionMap[fieldName].formLabel/>
+	</#if>
+	<#if  questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y" && (dataval) == "">
+		<span title="${hoverMsg}"><select id="${ctrlNameId}" name="${ctrlNameId}" ${txthtmlsetting}  style="border:1px solid #ff0000" 
+				onblur="removeBorderColor(this);">
+	<#else>
+		<#if  questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y">
+			<span title="${hoverMsg}"><select id="${ctrlNameId}" name="${ctrlNameId}" ${txthtmlsetting}  style="border:1px solid #cccccc" onblur="removeBorderColor(this);">
+		<#else>
+			<span title="${hoverMsg}"><select id="${ctrlNameId}" name="${ctrlNameId}" ${txthtmlsetting}  style="border:1px solid #cccccc">
+		</#if>
+	</#if>
+		<#list pckListData as pickList>
+			<#if pickList.code == dataval >
+					<option value="${pickList.code}" selected >${pickList.pickListDesc}</option>
+			<#else>
+					<option value="${pickList.code}" >${pickList.pickListDesc}</option>
+			</#if>
+		</#list>
+	</select></span>
+</#macro>
+
+<#macro formDataAdditional questionMap fieldName dataVo txtName htmlsetting="">
+		<#assign dataval = getDataAddtionalAddr(dataVo,txtName) />
+		<#if dataval != "" ><font color="red">*</font><#else>&nbsp;&nbsp;</#if>${questionMap[fieldName].formLabel}
+		
+</#macro>
+
+<#macro displayInputTextField questionMap fieldName dataVo txtName htmlsetting="">
+	<#if htmlsetting??> <#assign txthtmlsetting = htmlsetting/><#else> <#assign txthtmlsetting = "" /></#if>
+	<#if questionMap[fieldName].iconInfoDesc ??>
+			<#assign hoverMsg= questionMap[fieldName].iconInfoDesc/>
+		<#else>
+			<#assign hoverMsg= questionMap[fieldName].formLabel/>
+	</#if>
+	<#assign dataval = getData(dataVo,txtName) />
+	<#if questionMap[fieldName].isMandatory ?? && questionMap[fieldName].isMandatory == "Y">
+		<#if (dataval) == "">
+			<INPUT TYPE="text" name="${txtName}" id="${txtName}"  value="${dataval?html}"
+									 ${txthtmlsetting} 
+									 title="${hoverMsg}" style="border:1px solid #ff0000" 
+									 onchange="highlightMandatoryField(this , '${questionMap[fieldName].isMandatory}')"/>
+		<#else>
+		   	<INPUT TYPE="text" name="${txtName}" id="${txtName}"  value="${dataval?html}" 
+									 onchange="highlightMandatoryField(this , '${questionMap[fieldName].isMandatory}')" title="${hoverMsg}" ${txthtmlsetting} />					 
+		</#if>
+	<#else>
+			<INPUT TYPE="text" name="${txtName}" id="${txtName}"  value="${dataval?html}" 
+									 title="${hoverMsg}" ${txthtmlsetting} />
+	</#if>
+</#macro>
+<#macro formSelectWONameIdFromMultiVo questionMap fieldName ctrlNameId baseVo childVo detailsVo finalVo  voFieldName pckListData htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if baseVo??>
+			<#if baseVo[childVo]??>
+				<#if baseVo[childVo][detailsVo]??>
+					<#if baseVo[childVo][detailsVo][finalVo]??>
+						<#local finalDataVo = baseVo[childVo][detailsVo][finalVo] />
+						<#assign dataval = getData(finalDataVo, voFieldName) />	
+				<#else>
+					<#assign dataval = "" />
+			</#if>
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		
+		<@displaySelectDropdown questionMap fieldName ctrlNameId dataval pckListData htmlsetting/>
+	</#if>
+</#macro>
+<#macro formRadioIdFromMultiVo questionMap fieldName ctrlNameId baseVo childVo detailsVo finalVo  voFieldName pckListData onclickFucn htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if baseVo??>
+			<#if baseVo[childVo]??>
+				<#if baseVo[childVo][detailsVo]??>
+					<#if baseVo[childVo][detailsVo][finalVo]??>
+						<#local finalDataVo = baseVo[childVo][detailsVo][finalVo] />
+						<#assign dataval = getData(finalDataVo, voFieldName) />		
+				<#else>
+					<#assign dataval = "" />
+			</#if>
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displayRadioButtonTd questionMap fieldName ctrlNameId dataval pckListData onclickFucn htmlsetting/>
+	</#if>
+</#macro>
+<#macro formTextWONameIdFromMultiVo questionMap fieldName ctrlNameId baseVo childVo detailsVo finalVo  voFieldName   htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if baseVo??>
+			<#if baseVo[childVo]??>
+				<#if baseVo[childVo][detailsVo]??>
+					<#if baseVo[childVo][detailsVo][finalVo]??>
+						<#local finalDataVo = baseVo[childVo][detailsVo][finalVo] />
+						<#assign dataval = getData(finalDataVo, voFieldName) />		
+				<#else>
+					<#assign dataval = "" />
+			</#if>
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displayTextField questionMap fieldName ctrlNameId dataval htmlsetting/>
+	</#if>
+</#macro>
+<#macro formSelectWONameIdFromMultiArrrayVo questionMap fieldName ctrlNameId baseVo childVo detailsVo listVo arrayIndex voFieldName pckListData htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if baseVo??>
+			<#if baseVo[childVo]??>
+				<#if baseVo[childVo][detailsVo]??>
+				 	<#assign finalVo=baseVo[childVo][detailsVo]>
+					<#if finalVo[listVo]??>
+						<#local dataVoArr = finalVo[listVo] />
+							<#if dataVoArr[arrayIndex]??>
+								<#local finalDataVo = dataVoArr[arrayIndex] />
+								<#assign dataval = getData(finalDataVo, voFieldName) />		
+							<#else>
+								<#assign dataval = "" />
+							</#if>
+						
+					<#else>
+						<#assign dataval = "" />
+					</#if>
+				<#else>
+				<#assign dataval = "" />
+			</#if>
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displaySelectDropdown questionMap fieldName ctrlNameId dataval pckListData htmlsetting/>
+	</#if>
+</#macro>
+<#macro formRadioIdFromArrrayVo questionMap fieldName ctrlNameId baseVo childVo detailsVo listVo arrayIndex voFieldName pckListData onclickFucn htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if baseVo??>
+			<#if baseVo[childVo]??>
+				<#if baseVo[childVo][detailsVo]??>
+				 	<#assign finalVo=baseVo[childVo][detailsVo]>
+					<#if finalVo[listVo]??>
+						<#local dataVoArr = finalVo[listVo] />
+							<#if dataVoArr[arrayIndex]??>
+								<#local finalDataVo = dataVoArr[arrayIndex] />
+								<#assign dataval = getData(finalDataVo, voFieldName) />		
+							<#else>
+								<#assign dataval = "" />
+							</#if>
+					<#else>
+						<#assign dataval = "" />
+					</#if>
+				<#else>
+				<#assign dataval = "" />
+			</#if>
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displayRadioButtonTd questionMap fieldName ctrlNameId dataval pckListData onclickFucn htmlsetting/>
+	</#if>
+</#macro>
+<#macro formTextWONameIdFromDBArrrayVo questionMap fieldName ctrlNameId baseVo childVo detailsVo listVo arrayIndex voFieldName htmlsetting>
+	<#if questionMap[fieldName] ??>
+		<#if baseVo??>
+			<#if baseVo[childVo]??>
+				<#if baseVo[childVo][detailsVo]??>
+				 	<#assign finalVo=baseVo[childVo][detailsVo]>
+					<#if finalVo[listVo]??>
+						<#local dataVoArr = finalVo[listVo] />
+						<#if dataVoArr[arrayIndex]??>
+							<#local finalDataVo = dataVoArr[arrayIndex] />
+							<#assign dataval = getData(finalDataVo, voFieldName) />		
+						<#else>
+							<#assign dataval = "" />
+						</#if>
+					<#else>
+						<#assign dataval = "" />
+					</#if>
+				<#else>
+				<#assign dataval = "" />
+			</#if>
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displayTextField questionMap fieldName ctrlNameId dataval htmlsetting/>
+	</#if>
+</#macro>
+<#macro formTextWONameIdFromTLMultiVo questionMap fieldName ctrlNameId baseVo childVo finalVo  voFieldName   htmlsetting="">
+	<#if questionMap[fieldName] ??>
+		<#if baseVo??>
+			<#if baseVo[childVo]??>
+					<#if baseVo[childVo][finalVo]??>
+						<#local finalDataVo = baseVo[childVo][finalVo] />
+						<#assign dataval = getData(finalDataVo, voFieldName) />		
+				<#else>
+					<#assign dataval = "" />
+			</#if>
+			
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displayTextField questionMap fieldName ctrlNameId dataval htmlsetting/>
+	</#if>
+</#macro>
+
+<#macro formTextWONameIdFromMapVo questionMap fieldName ctrlNameId baseVo childVo detailsVo mapVo keyValue arrayIndex voFieldName htmlsetting>
+	<#if questionMap[fieldName] ??>
+		<#if baseVo??>
+			<#if baseVo[childVo]??>
+				<#if baseVo[childVo][detailsVo]??>
+				 	<#assign finalVo=baseVo[childVo][detailsVo]>
+						<#if finalVo[mapVo]??>
+							<#local mapVoArr = finalVo[mapVo] />
+								<#if mapVoArr[keyValue]??>
+									<#local dataVoArr = mapVoArr[keyValue] />
+										<#if dataVoArr[arrayIndex]??>
+											<#local finalDataVo = dataVoArr[arrayIndex] />
+											<#assign dataval = getData(finalDataVo, voFieldName) />		
+										<#else>
+											<#assign dataval = "" />
+										</#if>
+							<#else>
+								<#assign dataval = "" />
+							</#if>
+					<#else>
+						<#assign dataval = "" />
+					</#if>
+					
+				<#else>
+				<#assign dataval = "" />
+			</#if>
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displayTextField questionMap fieldName ctrlNameId dataval htmlsetting/>
+	</#if>
+</#macro>
+
+<#macro formSelectNameIdFromMapVo questionMap fieldName ctrlNameId baseVo childVo detailsVo mapVo keyValue arrayIndex voFieldName pckListData htmlsetting>
+	<#if questionMap[fieldName] ??>
+		<#if baseVo??>
+			<#if baseVo[childVo]??>
+				<#if baseVo[childVo][detailsVo]??>
+				 	<#assign finalVo=baseVo[childVo][detailsVo]>
+						<#if finalVo[mapVo]??>
+							<#local mapVoArr = finalVo[mapVo] />
+								<#if mapVoArr[keyValue]??>
+									<#local dataVoArr = mapVoArr[keyValue] />
+										<#if dataVoArr[arrayIndex]??>
+											<#local finalDataVo = dataVoArr[arrayIndex] />
+											<#assign dataval = getData(finalDataVo, voFieldName) />		
+										<#else>
+											<#assign dataval = "" />
+										</#if>
+							<#else>
+								<#assign dataval = "" />
+							</#if>
+					<#else>
+						<#assign dataval = "" />
+					</#if>
+					
+				<#else>
+				<#assign dataval = "" />
+			</#if>
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displaySelectDropdown questionMap fieldName ctrlNameId dataval pckListData htmlsetting/>
+	</#if>
+</#macro>
+ 
+
+<#macro formRadioIdFromMapVo questionMap fieldName ctrlNameId baseVo childVo detailsVo mapVo keyValue arrayIndex voFieldName pckListData onclickFucn htmlsetting>
+	<#if questionMap[fieldName] ??>
+		<#if baseVo??>
+			<#if baseVo[childVo]??>
+				<#if baseVo[childVo][detailsVo]??>
+				 	<#assign finalVo=baseVo[childVo][detailsVo]>
+						<#if finalVo[mapVo]??>
+							<#local mapVoArr = finalVo[mapVo] />
+								<#if mapVoArr[keyValue]??>
+									<#local dataVoArr = mapVoArr[keyValue] />
+										<#if dataVoArr[arrayIndex]??>
+											<#local finalDataVo = dataVoArr[arrayIndex] />
+											<#assign dataval = getData(finalDataVo, voFieldName) />		
+										<#else>
+											<#assign dataval = "" />
+										</#if>
+							<#else>
+								<#assign dataval = "" />
+							</#if>
+					<#else>
+						<#assign dataval = "" />
+					</#if>
+					
+				<#else>
+				<#assign dataval = "" />
+			</#if>
+			<#else>
+				<#assign dataval = "" />
+			</#if>
+		<#else>
+			<#assign dataval = "" />
+		</#if>
+		<@displayRadioButtonTd questionMap fieldName ctrlNameId dataval pckListData onclickFucn htmlsetting/>
+	</#if>
+</#macro>
