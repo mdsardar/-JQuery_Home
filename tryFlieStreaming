@@ -1,0 +1,1170 @@
+var unAssignedpageNo=1;
+var assignedpageNo=1;
+var tabIndex=0;
+var branchCode;
+var totalRecords="";
+var assignedPageNo=1;
+var tableAssigned;
+var tableUnAssigned;
+var unAssignedlineOfBusiness ='ALL';
+var assignedlineOfBusiness ='ALL';
+var paramType ='ALL';
+var paramId = $("#paramId").val();
+var loadingFlg=true;
+var pageNo = 1;
+var urlParam;
+var loginUserID=$("#loginUserID").val();
+var adminValueCheck=$("#adminValueCheck").val();
+var contextCreatedBy;
+var PageCountFrmTableForInbox=0;
+$(document).ready( function () { 
+	var pageCountUrl=contextPath+"/inbox/getPageCnt";
+	$.get(pageCountUrl, function(data){
+		PageCountFrmTableForInbox= data;
+	});
+	validateCreatedBy();
+	if(tabValue==='MAKER'){
+		$("#"+param_div).css("display", "none");
+		$("#"+param_div).hide();	
+	}
+	
+	$("#pageNo").val(pageNo);
+	$('#paramId').val("");
+	getTotalCustomersCount();
+	$('#'+idPrevious_UnAssigned).hide();
+	$('#'+idPrevious).hide();
+	disableAssignReAssign();
+	$("#"+unAssignedlineOfBusin).change(function () {
+		unAssignedpageNo=1;
+		$('#'+idUnAssignedCustomerSearch).val('');
+		unAssignedlineOfBusiness=$("#"+unAssignedlineOfBusin).val();
+    	url=contextPath+"/inbox/getUnAssigned"+"?pageNo="+unAssignedpageNo+"&tabValue="+tabValue+"&unAssignedlineOfBusiness="+unAssignedlineOfBusiness+"&unAssignedCustNo="+$("#"+idUnAssignedCustomerSearch).val();
+    	document.getElementById(idUnAssignedPageNumber).innerHTML=unAssignedpageNo;
+    	$('#'+idPrevious_UnAssigned).hide();
+    	getDataTable(url);
+    	hideUnAssignedWrkItm();
+    });
+	$("#"+assignedlineOfBusin).change(function () {
+		assignedlineOfBusiness=$("#"+assignedlineOfBusin).val();
+		assignedPageNo=1;
+		$('#'+idAssignedCustomerSearch).val('');
+		document.getElementById(idAssignedPageNumber).innerHTML=assignedPageNo;
+		url=contextPath+"/inbox/getAssigned"+"?pageNo="+assignedPageNo+"&tabValue="+tabValue+"&assignedlineOfBusiness="+assignedlineOfBusiness+"&assignedCustNo="+$("#"+idAssignedCustomerSearch).val();
+		$('#'+idPrevious).hide();
+		getDataTableForAssigned(url);
+		hideAssignedWrkItm();
+    	
+    });
+	url=contextPath+"/inbox/getUnAssigned"+"?pageNo="+unAssignedpageNo+"&tabValue="+tabValue+"&unAssignedlineOfBusiness="+unAssignedlineOfBusiness+"&unAssignedCustNo="+$("#"+idUnAssignedCustomerSearch).val();
+	getDataTable(url);
+	hideUnAssignedWrkItm();
+	hidesearchTextBox();
+	unAssignedEvents();
+	searchUnAssignedCustomerNo();
+	searchAssignedCustomerNo();
+	urlParam =contextPath+"/inbox/getParameter"+"?pageNo="+pageNo+"&tabValue="+tabValue+"&paramType="+paramType+"&paramId="+paramId;
+	getParameterDetails(urlParam);
+	$("#paramType").change(function () {
+		pageNo = 1;
+		$("#pageNo").val(pageNo);
+		paramType = $("#paramType").val();
+		$('#paramId').val("");
+		getTotalCustomersCount();
+		urlParam=contextPath+"/inbox/getParameter"+"?pageNo="+pageNo+"&tabValue="+tabValue+"&paramType="+paramType+"&paramId="+paramId;
+		getParameterDetails(urlParam);
+	});
+	paramConfigEvents();
+	
+});
+
+function allowOnlyCharAndNumber(e){
+	var regex = new RegExp("^[a-zA-Z0-9]+$");
+    var str = String.fromCharCode(!e.charCode ? e.which : e.charCode);
+    if (regex.test(str)) {
+        return true;
+    }
+    e.preventDefault();
+    return false;
+}
+function disableAssignReAssign(){
+	$('#'+btnIdAssign).addClass('bbuttonDisabled');
+	$('#'+idClaim).addClass('bbuttonDisabled');
+	$('#'+idReassign).addClass('bbuttonDisabled');
+	$('#'+reCliam).addClass('bbuttonDisabled');
+}
+
+function disableClaimUnClaim(){
+	$('#'+paramClaim).addClass('bbuttonDisabled');
+	$('#'+paramUnClaim).addClass('bbuttonDisabled');
+}
+
+function loadAssignedWorkItems(){
+	url=contextPath+"/inbox/getAssigned"+"?pageNo="+assignedpageNo+"&tabValue="+tabValue+"&assignedlineOfBusiness="+assignedlineOfBusiness+"&assignedCustNo="+$("#"+idAssignedCustomerSearch).val();
+	getDataTableForAssigned(url);
+	hideAssignedWrkItm();
+	assignedEvents();
+}
+function hidesearchTextBox(){
+	document.getElementById(unAssignedNoRecordsDiv).style.display = 'none';
+	document.getElementById(assignedNoRecordsDiv).style.display = 'none';
+	document.getElementById(idAssignToUserDiv).style.display = 'none';
+	document.getElementById(idUnAssignedPageNumber).innerHTML=unAssignedpageNo;
+	document.getElementById(idAssignedPageNumber).innerHTML=assignedpageNo;
+}
+function getUnAssignedParameter(){
+	return $("#"+unAssignedlineOfBusin).val();
+}
+function hideDiv(){
+	if (tableUnAssigned.data().count() == 0 ){
+		document.getElementById(unAssignedNoRecordsDiv).style.display = 'block';
+		document.getElementById(divUnAssigned).style.display = 'none';
+		document.getElementById(id_productTypeSearch).style.display = 'none';
+		document.getElementById(btnUnAssignedPageNation).style.display = 'none';
+		document.getElementById(btnAssignedClim).style.display = 'none';
+	}else{
+		document.getElementById(unAssignedNoRecordsDiv).style.display = 'none';
+		document.getElementById(divUnAssigned).style.display = 'block';
+		document.getElementById(id_productTypeSearch).style.display = 'block';
+		document.getElementById(btnUnAssignedPageNation).style.display = 'block';
+		document.getElementById(btnAssignedClim).style.display = 'block';
+	}
+	if(tableAssigned.data().count() == 0){
+		document.getElementById(btnReAssignedClim).style.display = 'none';
+		document.getElementById(id_productTypeSearch_Assigned).style.display = 'none';
+		document.getElementById(assignedNoRecordsDiv).style.display = 'block';
+		document.getElementById(divAssigned).style.display = 'none';
+		document.getElementById(btnAssignedPageNation).style.display = 'none';
+	}else{
+		document.getElementById(btnReAssignedClim).style.display = 'block';
+		document.getElementById(id_productTypeSearch_Assigned).style.display = 'block';
+		document.getElementById(assignedNoRecordsDiv).style.display = 'none';
+		document.getElementById(divAssigned).style.display = 'block';
+		document.getElementById(btnAssignedPageNation).style.display = 'block';
+	}
+}
+function getUnAssignedUserDetailsBasedOnBranch(){
+	var jsonData= getUnAssignedCheckedRecords();
+	$('#'+cmbBranch).change(function(event) {
+		showPopupLoader();
+		$.ajax({
+			url:contextPath+'/inbox/getUsers?branchCode='+$('#'+cmbBranch).val()+'&tabValue='+tabValue,
+			method:'POST',
+			contentType:'application/json',
+			dataType:'json',
+			data	:jsonData,
+			success:function(data){
+				console.log(data);
+				var htmlString = "";
+				for(var i = 0 ; i<data.length; i++) {
+					htmlString += '<option value="' + data[i].userId + '">' + data[i].userName + '</option>';
+				}
+				$("#"+cmbUser).html(htmlString);
+				if(document.getElementById(cmbUser)){
+					document.getElementById(cmbUser).className = 'tfselect';
+				}
+				closePopupLoader();
+			},
+			error:function(req,error){
+				console.log(error);
+				closePopupLoader();
+			}
+		});
+	});
+}
+function getUserDetailsBasedOnBranch(){
+	var jsonData= getAssignedCheckedRecords();
+	$('#'+cmbBranch).change(function(event) {
+		showPopupLoader();
+		$.ajax({
+			url:contextPath+'/inbox/getUsers?branchCode='+$('#'+cmbBranch).val()+'&tabValue='+tabValue,
+			method:'POST',
+			contentType:'application/json',
+			dataType:'json',
+			data	:jsonData,
+			success:function(data){
+				console.log(data);
+				var htmlString = "";
+				for(var i = 0 ; i<data.length; i++) {
+					htmlString += '<option value="' + data[i].userId + '">' + data[i].userName + '</option>';
+				}
+				$("#"+cmbUser).html(htmlString);
+				if(document.getElementById(cmbUser)){
+					document.getElementById(cmbUser).className = 'tfselect';
+				}
+				closePopupLoader();
+			},
+			error:function(req,error){
+				console.log(error);
+				closePopupLoader();
+			}
+		});
+	});
+}
+
+function getParamAssignedCheckedRecords(){
+	var selectedCheckboxesParam = $(".paramAssignCheckbox:checked");
+	var requestData = [];
+	for(var i = 0; i<selectedCheckboxesParam.length; i++) {
+		var data = {};
+		data.parameterId = $(selectedCheckboxesParam[i]).attr("data-parameterId");
+		data.parameterType = $(selectedCheckboxesParam[i]).attr("data-parameterType");
+		data.assignUserId = $(selectedCheckboxesParam[i]).attr("data-assignUserId");
+		data.createdbyUser = $(selectedCheckboxesParam[i]).attr("data-createdbyUser");
+		requestData.push(data);
+	}
+	
+	console.log(JSON.stringify(requestData));
+	return JSON.stringify(requestData)
+}
+
+function getUnAssignedCheckedRecords(){
+	var selectedCheckboxes = $(".unAssignCheckbox:checked");
+	var requestData = [];
+	for(var i = 0; i<selectedCheckboxes.length; i++) {
+		var data = {};
+		data.customerNo = $(selectedCheckboxes[i]).attr("data-customerNo");
+		data.controlNo = $(selectedCheckboxes[i]).attr("data-controlNo");
+		data.cddStatus = $(selectedCheckboxes[i]).attr("data-cddStatus");
+		requestData.push(data);
+	}
+	console.log(JSON.stringify(requestData));
+	return JSON.stringify(requestData)
+}
+/**
+ * This Method is used to get the selected items for Assign,ReAssign,Claim and Unclaim.
+ * @returns
+ */
+function getUnAssignedCheckedRecordsForWorkFlow(){
+	var selectedCheckboxes = $(".unAssignCheckbox:checked");
+	var requestData = [];
+	for(var i = 0; i<selectedCheckboxes.length; i++) {
+		var data = {};
+		data.customerNo = $(selectedCheckboxes[i]).attr("data-customerNo");
+		data.controlNo = $(selectedCheckboxes[i]).attr("data-controlNo");
+		data.cddStatus = $(selectedCheckboxes[i]).attr("data-cddStatus");
+		requestData.push(data);
+	}
+	return requestData;
+}
+function getAssignedCheckedRecords(){
+	var selectedCheckboxes = $(".assignCheckbox:checked");
+	var requestData = [];
+	for(var i = 0; i<selectedCheckboxes.length; i++) {
+		var data = {};
+		data.customerNo = $(selectedCheckboxes[i]).attr("data-customerNo");
+		data.controlNo = $(selectedCheckboxes[i]).attr("data-controlNo");
+		data.cddStatus = $(selectedCheckboxes[i]).attr("data-cddStatus");
+		data.cddCurrentlyAssignedUser = $(selectedCheckboxes[i]).attr("data-cddCurrentlyAssignedUser");
+		requestData.push(data);
+	}
+	console.log(JSON.stringify(requestData));
+	return JSON.stringify(requestData)
+}
+/**
+ * This Method is used to Assign,ReAssign,Claim and Unclaim.
+ * @returns
+ */
+function getAssignedCheckedRecordsWorkflow(){
+	var selectedCheckboxes = $(".assignCheckbox:checked");
+	var requestData = [];
+	for(var i = 0; i<selectedCheckboxes.length; i++) {
+		var data = {};
+		data.customerNo = $(selectedCheckboxes[i]).attr("data-customerNo");
+		data.controlNo = $(selectedCheckboxes[i]).attr("data-controlNo");
+		data.cddStatus = $(selectedCheckboxes[i]).attr("data-cddStatus");
+		data.cddCurrentlyAssignedUser = $(selectedCheckboxes[i]).attr("data-cddCurrentlyAssignedUser");
+		requestData.push(data);
+	}
+	return requestData;
+}
+
+function loadBranchForUnAssigned(){
+	var jsonData= getUnAssignedCheckedRecords();
+	$.ajax({
+		url:contextPath+'/inbox/loadBranch?tabValue='+tabValue,
+		method:'POST',
+		contentType:'application/json',
+		dataType:'json',
+		data	:jsonData,
+		success:function(data){
+			console.log(data);
+			var htmlString = "";
+			for(var i = 0 ; i<data.length; i++) {
+				htmlString += '<option value="' + data[i].brnchCode + '">' + data[i].brnchDesc + '</option>';
+			}
+			$("#"+cmbBranch).html(htmlString);
+			
+			$( "#"+idAssignToUserDiv).dialog({
+			      resizable: false,
+			      height: 280,
+			      width: 680,
+			      modal: true,
+			     buttons: {
+			          "Assign": function() {
+			        	  postUnAssigUserDetails($("#"+cmbUser).val(),"ASSIGN");
+			            $( this ).dialog( "close" );
+			          },
+			          "Cancel": function() {
+			            $( this ).dialog( "close" );
+			          }
+			        }
+
+			    });
+			$("#"+cmbBranch).trigger('change');
+			//$('.'+cmbBranch+':visible').html(htmlString);
+		},
+		error:function(req,error){
+			console.log(error);
+		}
+	});
+}
+function loadBranchForAssigned(){
+	var jsonData= getAssignedCheckedRecords();
+	$.ajax({
+		url:contextPath+'/inbox/loadBranch?tabValue='+tabValue,
+		method:'POST',
+		contentType:'application/json',
+		dataType:'json',
+		data	:jsonData,
+		success:function(data){
+			console.log(data);
+			var htmlString = "";
+			for(var i = 0 ; i<data.length; i++) {
+				htmlString += '<option value="' + data[i].brnchCode + '">' + data[i].brnchDesc + '</option>';
+			}
+			$("#"+cmbBranch).html(htmlString);
+			
+			$( "#"+idAssignToUserDiv ).dialog({
+			      resizable: false,
+			      height: 280,
+			      width: 680,
+			      modal: true,
+			     buttons: {
+			          "ReAssign": function() {
+			        	  postAssigUserDetails($("#"+cmbUser).val(),"REASSIGN");
+			            $( this ).dialog( "close" );
+			          },
+			          "Cancel": function() {
+			            $( this ).dialog( "close" );
+			          }
+			        }
+
+			    });
+			$("#"+cmbBranch).trigger('change');
+			//$('.'+cmbBranch+':visible').html(htmlString);
+		},
+		error:function(req,error){
+			console.log(error);
+		}
+	});
+}
+function postUnAssigUserDetails(userId,assign){
+	showPopupLoader();
+	var selectedCdd= getUnAssignedCheckedRecordsForWorkFlow();
+	var data = {};
+	data.userId =userId;
+	data.assign = assign;
+	data.systemRole = tabValue;
+	data.bnkId = $('#'+cmbBranch).val();
+	data.comment = $('#'+idComment).val();
+	data.inboxRequestVo= selectedCdd;
+	var unAssignedPostData= JSON.stringify(data);
+		$.ajax({
+			url:contextPath+'/inbox/postUser',
+			method:'POST',
+			contentType:'application/json',
+			dataType:'json',
+			data	:unAssignedPostData,
+			success:function(data){
+				console.log(data);
+				console.log(data.workFloRwFailureMessage);
+				if(null != data.workFlowMessage && data.workFlowMessage != ""){
+					closePopupLoader();
+					alert(data.workFlowMessage);
+					url=contextPath+"/inbox/getUnAssigned"+"?pageNo="+unAssignedpageNo+"&tabValue="+tabValue+"&unAssignedlineOfBusiness="+unAssignedlineOfBusiness+"&unAssignedCustNo="+$("#"+idUnAssignedCustomerSearch).val();
+					getDataTable(url);
+					hideUnAssignedWrkItm();
+					url=contextPath+"/inbox/getAssigned"+"?pageNo="+assignedpageNo+"&tabValue="+tabValue+"&assignedlineOfBusiness="+assignedlineOfBusiness+"&assignedCustNo="+$("#"+idAssignedCustomerSearch).val();
+					getDataTableForAssigned(url);
+					hideAssignedWrkItm();
+					hidesearchTextBox();
+					//unAssignedEvents();
+					//assignedEvents();
+					unAssignedpageNo=1;
+				   	document.getElementById(idUnAssignedPageNumber).innerHTML=unAssignedpageNo;
+				   	$('#'+idPrevious_UnAssigned).hide();
+				   	assignedPageNo=1;
+					document.getElementById(idAssignedPageNumber).innerHTML=assignedPageNo;
+			   	$('#'+idPrevious).hide();
+				}else if(null != data.workFlowFailureMessage && data.workFlowFailureMessage != ""){
+					closePopupLoader();
+					alert(data.workFlowFailureMessage);
+				}
+				if(data.isValidUser != false){
+					disableAssignReAssign();
+				}
+			},
+			error:function(req,error){
+				closePopupLoader();
+				console.log(error);
+				disableAssignReAssign();
+			}
+		});
+}
+function postAssigUserDetails(userId,assign){
+	showPopupLoader();
+	var selectedCdd= getAssignedCheckedRecordsWorkflow();
+	var data = {};
+	data.userId =userId;
+	data.assign = assign;
+	data.systemRole = tabValue;
+	data.bnkId = $('#'+cmbBranch).val();
+	data.comment = $('#'+idComment).val();
+	data.inboxRequestVo= selectedCdd;
+	var assignedPostData= JSON.stringify(data);
+	
+		$.ajax({
+			url:contextPath+'/inbox/postUser',
+			method:'POST',
+			contentType:'application/json',
+			dataType:'json',
+			data	:assignedPostData,
+			success:function(data){
+				closePopupLoader();
+				console.log(data);
+				if(null != data.workFlowMessage && data.workFlowMessage != ""){
+					alert(data.workFlowMessage);
+					url=contextPath+"/inbox/getUnAssigned"+"?pageNo="+unAssignedpageNo+"&tabValue="+tabValue+"&unAssignedlineOfBusiness="+unAssignedlineOfBusiness+"&unAssignedCustNo="+$("#"+idUnAssignedCustomerSearch).val();
+					getDataTable(url);
+					hideUnAssignedWrkItm();
+					url=contextPath+"/inbox/getAssigned"+"?pageNo="+assignedpageNo+"&tabValue="+tabValue+"&assignedlineOfBusiness="+assignedlineOfBusiness+"&assignedCustNo="+$("#"+idAssignedCustomerSearch).val();
+					getDataTableForAssigned(url);
+					hideAssignedWrkItm();
+					hidesearchTextBox();
+					//unAssignedEvents();
+					//assignedEvents();
+					unAssignedpageNo=1;
+				   	document.getElementById(idUnAssignedPageNumber).innerHTML=unAssignedpageNo;
+				   	$('#'+idPrevious_UnAssigned).hide();
+				   	assignedPageNo=1;
+					document.getElementById(idAssignedPageNumber).innerHTML=assignedPageNo;
+				} else if(null != data.workFlowFailureMessage && data.workFlowFailureMessage != ""){
+					closePopupLoader();
+					alert(data.workFlowFailureMessage);
+				}
+				if(data.isValidUser != false){
+					disableAssignReAssign();
+				}
+			},
+			error:function(req,error){
+				closePopupLoader();
+				console.log(error);
+				disableAssignReAssign();
+			}
+		});
+}
+
+
+function paramerterClaimDetails(claimDet){
+	showPopupLoader();
+	var jsonDataParam=getParamAssignedCheckedRecords();
+	if(claimDet=='CLIAM'){
+			var assigneeTOFlag=true;
+			var sameUservalidation=true;
+			var selectedCheckboxesParam = $(".paramAssignCheckbox:checked");
+			var requestData = [];
+			for(var i = 0; i<selectedCheckboxesParam.length; i++) {
+				if($(selectedCheckboxesParam[i]).attr("data-assignUserId") != ''){
+					assigneeTOFlag=false;
+				}
+				if($(selectedCheckboxesParam[i]).attr("data-createdbyUser") == contextCreatedBy){
+					sameUservalidation=false;
+				}
+			}
+			
+			if(sameUservalidation ===false){
+				alert("Maker and checker user can not be same.");
+				closePopupLoader();
+				return false;
+			}
+			
+			if(assigneeTOFlag ===false){
+				alert("Please select UnClaimed Parameter Work Items");
+				closePopupLoader();
+				return false;
+			}
+	}
+	if(claimDet=='UNCLAIM'){
+		var unAssigneeTOFlag=true;
+		var unAssigneeTOIndicator=true;
+		var sameUservalidationUnAssign=true;
+		var selectedCheckboxesUnClaimParam = $(".paramAssignCheckbox:checked");
+		var requestData = [];
+		for(var i = 0; i<selectedCheckboxesUnClaimParam.length; i++) {
+			if($(selectedCheckboxesUnClaimParam[i]).attr("data-assignUserId") == ''){
+				unAssigneeTOFlag=false;
+			}
+			if((adminValueCheck !='ADMIN_USER') && ($(selectedCheckboxesUnClaimParam[i]).attr("data-assignUserId") != '')  &&  ($(selectedCheckboxesUnClaimParam[i]).attr("data-assignUserId") != loginUserID)){
+				unAssigneeTOIndicator=false;
+			}
+			if($(selectedCheckboxesUnClaimParam[i]).attr("data-createdbyUser") == contextCreatedBy){
+				sameUservalidationUnAssign=false;
+			}
+		}
+		
+		
+		if(unAssigneeTOFlag ===false){
+			alert("Please select Claimed Parameter Work Items");
+			closePopupLoader();
+			return false;
+		}
+		
+		if(unAssigneeTOIndicator ===false){
+			alert("Parameter Work Items Claimed by Other User");
+			closePopupLoader();
+			return false;
+		}
+		
+		if(sameUservalidationUnAssign ===false){
+			alert("Maker and checker user can not be same.");
+			closePopupLoader();
+			return false;
+		}
+		
+	}
+	
+	
+	$.ajax({
+		url:contextPath+'/inbox/paramClaimAndUnClaim?userId='+loginUserID+"&assign="+claimDet+"&systemRole="+tabValue,
+		method:'POST',
+		contentType:'application/json',
+		dataType:'json',
+		data	:jsonDataParam,
+		success:function(data){
+			if(null != data.workFlowMessage && data.workFlowMessage != ""){
+			showPopupLoader();
+			pageNo = $("#pageNo").val();
+			paramType = $("#paramType").val();
+			paramId= $("#paramId").val();
+			getTotalCustomersCount();
+			urlParam=contextPath+"/inbox/getParameter"+"?pageNo="+pageNo+"&tabValue="+tabValue+"&paramType="+paramType+"&paramId="+paramId;
+			getParameterDetails(urlParam);
+			disableClaimUnClaim();
+			closePopupLoader();
+			alert(data.workFlowMessage);
+			} else if(null != data.workFlowFailureMessage && data.workFlowFailureMessage != ""){
+				closePopupLoader();
+				alert(data.workFlowFailureMessage);
+			}
+		},
+		error:function(req,error){
+			alert("Exception Occured When "+claimDet+" Parameter Work Items ");
+			disableClaimUnClaim();
+			closePopupLoader();
+		}
+	});
+	
+}
+
+function openUnAssignedPopUp(){
+	$('#'+idComment).val('');
+	loadBranchForUnAssigned();
+}
+
+function openAssignedPopUp(){
+	$('#'+idComment).val('');
+	loadBranchForAssigned();
+}
+
+$(function () {
+	$("#"+btnIdAssign).on('click', function(event) {
+		if($(this).hasClass('bbuttonDisabled')) {
+			event.preventDefault();
+			return false;
+		}
+		openUnAssignedPopUp();
+		getUnAssignedUserDetailsBasedOnBranch();
+	});
+	$("#"+idClaim).on('click', function(event) {
+		if($(this).hasClass('bbuttonDisabled')) {
+			event.preventDefault();
+			return false;
+		}
+		postUnAssigUserDetails($("#"+cmbUser).val(),"CLIAM");
+	});
+	$("#"+idReassign).on('click', function(event) {
+		if($(this).hasClass('bbuttonDisabled')) {
+			event.preventDefault();
+			return false;
+		}
+		openAssignedPopUp();
+		getUserDetailsBasedOnBranch();
+	});
+	$("#"+reCliam).on('click', function(event) {
+		if($(this).hasClass('bbuttonDisabled')) {
+			event.preventDefault();
+			return false;
+		}
+		postAssigUserDetails($("#"+cmbUser).val(),"UNCLAIM");
+	});
+	
+	$("#"+paramClaim).on('click', function(event) {
+		if($(this).hasClass('bbuttonDisabled')) {
+			event.preventDefault();
+			return false;
+		}
+		paramerterClaimDetails("CLIAM");
+	});
+	
+	$("#"+paramUnClaim).on('click', function(event) {
+		if($(this).hasClass('bbuttonDisabled')) {
+			event.preventDefault();
+			return false;
+		}
+		paramerterClaimDetails("UNCLAIM");
+	});
+	
+});
+function pageNationForAssign(){
+	$('#'+idPrevious).click(function(){
+	if(assignedPageNo != 1){
+   		 assignedPageNo--;     
+   	 }
+	if(assignedPageNo > 1){
+		$('#'+idPrevious).show();
+	}else{
+		$('#'+idPrevious).hide();
+	}
+	 document.getElementById(idAssignedPageNumber).innerHTML=assignedPageNo;
+	 var url_previous=contextPath+"/inbox/getAssigned"+"?pageNo="+assignedPageNo+"&tabValue="+tabValue+"&assignedlineOfBusiness="+$('#'+assignedlineOfBusin).val()+"&assignedCustNo="+$("#"+idAssignedCustomerSearch).val();
+	 getDataTableForAssigned(url_previous);
+	 hideAssignedWrkItm();
+   });
+   $('#'+idNext).click(function(){ 
+	 $('#'+idPrevious).show();
+	 assignedPageNo = document.getElementById(idAssignedPageNumber).innerHTML;
+	 assignedPageNo++;
+	 document.getElementById(idAssignedPageNumber).innerHTML=assignedPageNo;
+   	 url=contextPath+"/inbox/getAssigned"+"?pageNo="+assignedPageNo+"&tabValue="+tabValue+"&assignedlineOfBusiness="+$('#'+assignedlineOfBusin).val()+"&assignedCustNo="+$("#"+idAssignedCustomerSearch).val();
+   	 getDataTableForAssigned(url);
+   	 hideAssignedWrkItm();
+   });
+}
+function searchUnAssignedCustomerNo(){
+	var  tableMaker = $('#'+unAssignedTable).DataTable();
+	$('#'+btnCustomerSearch).click(function(){
+		 unAssignedpageNo =1;
+		 url=contextPath+"/inbox/getUnAssigned"+"?pageNo="+unAssignedpageNo+"&tabValue="+tabValue+"&unAssignedlineOfBusiness="+unAssignedlineOfBusiness+"&unAssignedCustNo="+$("#"+idUnAssignedCustomerSearch).val();
+	   	 getDataTable(url);
+	   	 hideUnAssignedWrkItm();
+	   	document.getElementById(idUnAssignedPageNumber).innerHTML=unAssignedpageNo;
+		$('#'+idPrevious_UnAssigned).hide();
+	   	$('#'+idNext_UnAssigned).hide();
+	});
+}
+function searchAssignedCustomerNo(){ 
+	$('#'+btnAssignedCustomerSearch).click(function(){
+		unAssignedpageNo =1;
+		url=contextPath+"/inbox/getAssigned"+"?pageNo="+unAssignedpageNo+"&tabValue="+tabValue+"&assignedlineOfBusiness="+assignedlineOfBusiness+"&assignedCustNo="+$("#"+idAssignedCustomerSearch).val();
+		getDataTableForAssigned(url);
+	   	hideAssignedWrkItm();
+	   	document.getElementById(idAssignedPageNumber).innerHTML=unAssignedpageNo;
+	   	$('#'+idPrevious).hide();
+	   	$('#'+idNext).hide();
+	});
+	pageNationForAssign();
+}
+function clearCustomerNumberForUnAssigned(){
+	var customerNumber= $("#"+idUnAssignedCustomerSearch).val().length;
+	if(customerNumber < 1){
+		url=contextPath+"/inbox/getUnAssigned"+"?pageNo="+1+"&tabValue="+tabValue+"&unAssignedlineOfBusiness="+unAssignedlineOfBusiness+"&unAssignedCustNo="+$("#"+idUnAssignedCustomerSearch).val();
+	   	getDataTable(url);
+	   	hideUnAssignedWrkItm();
+		$('#'+idNext_UnAssigned).show();
+	}
+}
+
+function clearCustomerNumberForAssigned(){
+	var assignedCustomerNumber= $("#"+idAssignedCustomerSearch).val().length;
+	if(assignedCustomerNumber < 1){
+		url=contextPath+"/inbox/getAssigned"+"?pageNo="+1+"&tabValue="+tabValue+"&assignedlineOfBusiness="+assignedlineOfBusiness+"&assignedCustNo="+$("#"+idAssignedCustomerSearch).val();
+		getDataTableForAssigned(url);
+	   	 hideAssignedWrkItm();
+	   	$('#'+idNext).show();
+	}
+}
+function unAssignedEvents(){
+	var  tableMaker = $('#'+unAssignedTable).DataTable();
+	$('#'+imgUnAssigned).click(function(){
+		$('#'+unAssignedlineOfBusin).val('ALL');
+		$('#'+idUnAssignedCustomerSearch).val('');
+		$('#'+imgUnAssigned_rotation).show();
+		$('#'+imgUnAssigned).hide();
+		$("#"+idUnAssignedCustomerSearch).val("");
+		 url=contextPath+"/inbox/getUnAssigned"+"?pageNo="+1+"&tabValue="+tabValue+"&unAssignedlineOfBusiness="+$('#'+unAssignedlineOfBusin).val()+"&unAssignedCustNo="+$("#"+idUnAssignedCustomerSearch).val();
+	   	 getDataTable(url);
+	   	 hideUnAssignedWrkItm();
+	   	 unAssignedpageNo=1;
+	   	document.getElementById(idUnAssignedPageNumber).innerHTML=unAssignedpageNo;
+	   	$('#'+idPrevious_UnAssigned).hide();
+	});
+	
+    $('#'+idPrevious_UnAssigned).click(function(){
+    	$('#'+idNext_UnAssigned).show();
+    	if(unAssignedpageNo == 1){
+    		$('#'+idPrevious_UnAssigned).hide();
+    		return;
+    	}
+    	 if(unAssignedpageNo != 1){
+    		 unAssignedpageNo--;  
+    	 }
+    	 document.getElementById(idUnAssignedPageNumber).innerHTML=unAssignedpageNo;
+    	 url=contextPath+"/inbox/getUnAssigned"+"?pageNo="+unAssignedpageNo+"&tabValue="+tabValue+"&unAssignedlineOfBusiness="+$('#'+unAssignedlineOfBusin).val()+"&unAssignedCustNo="+$("#"+idUnAssignedCustomerSearch).val();
+    	 getDataTable(url);
+    	 hideUnAssignedWrkItm();
+    });
+    $('#'+idNext_UnAssigned).click(function(){
+    	$('#'+idPrevious_UnAssigned).show();
+    	 unAssignedpageNo++;
+    	 document.getElementById(idUnAssignedPageNumber).innerHTML=unAssignedpageNo;
+    	 url=contextPath+"/inbox/getUnAssigned"+"?pageNo="+unAssignedpageNo+"&tabValue="+tabValue+"&unAssignedlineOfBusiness="+$('#'+unAssignedlineOfBusin).val()+"&unAssignedCustNo="+$("#"+idUnAssignedCustomerSearch).val();
+    	 getDataTable(url);
+    	 hideUnAssignedWrkItm();
+    });
+}
+function assignedEvents(){
+	$('#'+imgAssigned).click(function(){
+		assignedPageNo=1;
+		$('#'+assignedlineOfBusin).val('ALL');
+		$("#"+idAssignedCustomerSearch).val("");
+		 $('#'+imgAssigned_rotation).show();
+		 $('#'+imgAssigned).hide();
+		url=contextPath+"/inbox/getAssigned"+"?pageNo="+1+"&tabValue="+tabValue+"&assignedlineOfBusiness="+$('#'+assignedlineOfBusin).val()+"&assignedCustNo="+$("#"+idAssignedCustomerSearch).val();
+		getDataTableForAssigned(url);
+	   	 hideAssignedWrkItm();
+	   	document.getElementById(idAssignedPageNumber).innerHTML=1;
+	   	$('#'+idPrevious).hide();
+	});
+}
+function paramConfigEvents(){
+	$('#'+imgParamConfig).click(function(){
+		 $('#paramType').val('ALL');
+		 $('#paramId').val("");
+		 $('#'+imgParamConfig_rotation).show();
+		 $('#'+imgParamConfig).hide();
+		 pageNo = 1;
+		 $("#pageNo").val(pageNo);
+		 getTotalCustomersCount();
+		 url=contextPath + "/inbox/getParameter"+"?pageNo="+1+"&tabValue="+tabValue+"&paramType=ALL&paramId=";
+         getParameterDetails(url)
+	});
+}
+function hideUnAssignedWrkItm(){
+	document.getElementById(unAssignedTable+'_length').style.display = 'none';
+	document.getElementById(unAssignedTable+'_paginate').style.display = 'none';
+	document.getElementById(unAssignedTable+'_info').style.display = 'none';
+	document.getElementById(unAssignedTable+'_filter').style.display = 'none';
+}
+function hideAssignedWrkItm(){
+	document.getElementById(assignedTable+'_length').style.display = 'none';
+	document.getElementById(assignedTable+'_paginate').style.display = 'none';
+	document.getElementById(assignedTable+'_info').style.display = 'none';
+	document.getElementById(assignedTable+'_filter').style.display = 'none';
+}
+
+function toggleParameterAssignedCheckbox(element)
+{
+	var unAssignedcheckBoxLenth=$("input[type='checkbox'][name='paramAssignedCheckBox']:checked").length;
+	if(unAssignedcheckBoxLenth > 0){
+		$('#'+paramClaim).removeClass('bbuttonDisabled');
+		$('#'+paramUnClaim).removeClass('bbuttonDisabled');
+		$('#'+paramClaim).addClass('bbutton');
+		$('#'+paramUnClaim).addClass('bbutton');
+	}else{
+		$('#'+paramClaim).removeClass('bbutton');
+		$('#'+paramUnClaim).removeClass('bbutton');
+		$('#'+paramClaim).addClass('bbuttonDisabled');
+		$('#'+paramUnClaim).addClass('bbuttonDisabled');
+	}
+}
+
+function toggleUnAssignedCheckbox(element)
+{
+	var unAssignedcheckBoxLenth=$("input[type='checkbox'][name='unAssignedCheckBox']:checked").length;
+	if(unAssignedcheckBoxLenth > 0){
+		$('#'+btnIdAssign).removeClass('bbuttonDisabled');
+		$('#'+idClaim).removeClass('bbuttonDisabled');
+		$('#'+btnIdAssign).addClass('bbutton');
+		$('#'+idClaim).addClass('bbutton');
+	}else{
+		$('#'+btnIdAssign).removeClass('bbutton');
+		$('#'+idClaim).removeClass('bbutton');
+		$('#'+btnIdAssign).addClass('bbuttonDisabled');
+		$('#'+idClaim).addClass('bbuttonDisabled');
+	}
+}
+function toggleAssignedCheckbox(element){
+	var assignedCheckBoxLenth=$("input[type='checkbox'][name='assignedCheckBox']:checked").length;
+	if(assignedCheckBoxLenth > 0){
+		$('#'+idReassign).removeClass('bbuttonDisabled');
+		$('#'+reCliam).removeClass('bbuttonDisabled');
+		$('#'+idReassign).addClass('bbutton');
+		$('#'+reCliam).addClass('bbutton');
+	}else{
+		$('#'+idReassign).removeClass('bbutton');
+		$('#'+reCliam).removeClass('bbutton');
+		$('#'+idReassign).addClass('bbuttonDisabled');
+		$('#'+reCliam).addClass('bbuttonDisabled');
+	}
+}
+function getDataTable(url){
+	var unAssignedTotalRecords;
+	var pFlg;
+	  tableUnAssigned = $('#'+unAssignedTable).DataTable({
+		  "autoWidth": false,
+		  "initComplete": function(settings, json) {
+			  $('#'+imgUnAssigned_rotation).hide();
+			  $('#'+imgUnAssigned).show();
+			  if(tableUnAssigned.data().count() < PageCountFrmTableForInbox){
+		    		document.getElementById(idNext_UnAssigned).style.visibility="hidden";
+			  	}else{
+			  		if(tableUnAssigned.data().count() == unAssignedTotalRecords){
+			  			document.getElementById(idNext_UnAssigned).style.visibility="hidden";
+			  			document.getElementById(idPrevious_UnAssigned).style.visibility="hidden";
+			  		}else{
+			  			pFlg = handleLastPageInDatatable(unAssignedTotalRecords,PageCountFrmTableForInbox,unAssignedpageNo);
+		  				if(!pFlg){
+			  				document.getElementById(idNext_UnAssigned).style.visibility="hidden";
+			  			}else{
+			  				document.getElementById(idNext_UnAssigned).style.visibility="visible";
+			  				$('#'+idNext_UnAssigned).show();
+			  			}
+			  		}
+		    	}
+			   if(unAssignedpageNo == 1){
+		    		$('#'+idPrevious_UnAssigned).hide();
+		    	}
+			 },
+		  destroy: true,
+		  	 "ajax": {
+	             "url": url,
+	             "dataSrc": function(data) {
+	            	 console.log(data);
+	            	 if(data.isRoCodeOwn=='YES'){
+	            		 hideUnAssignedWrkItm();
+	            		 document.getElementById(divUnAssigned).style.display = 'none';
+	            		 document.getElementById(id_productTypeSearch).style.display = 'none';
+	            		 document.getElementById(id_UnAssignedTitle).style.display = 'none';
+	            		 document.getElementById(btnAssignedClim).style.display = 'none';
+	            		 $('.dataTables_scrollBody').height(240);
+	            	 }
+	            	// if(unAssignedpageNo == 1) {
+	            		 unAssignedTotalRecords = data.totalCount;
+	            		 $("#"+idUnAssignedTotal).html(data.totalCount);
+	            	 //}	  
+	            	 if(loadingFlg == true){
+	            		 loadAssignedWorkItems();
+	            		 loadingFlg = false;
+	            	 }
+	            	 return data.inboxEntity;
+	            	 
+	             }
+	         },
+		  	 method:'GET',
+		  	 contentType:'application/json',
+		  	 pageLength 	: 15,
+		  	 dataType:'json',
+		  	 bFilter	  	: true,
+			 scrollY		: "112px",
+			 stripeClasses: [ 'odd-row', 'even-row' ],
+			 sAjaxDataProp: "",
+			 order		: [[ 8, "desc" ]],
+			 columnDefs: [{ "width": "2%", "targets": 0 },{"className": "dt-left", "targets": [5]},{"className": "dt-left", "targets": [6]},{"className": "dt-left", "targets": [9]},{"className": "dt-center", "targets": [8]},{"targets":[11],"visible":false},{"targets":[12],"visible":false},{"targets":[13],"visible":false}],
+			 aoColumns 	: [
+									 {
+										mData:   "selectBox",
+									     render: function ( mData, type, row ) {
+									       if ( type === 'display' ) {
+									    	   return '<input type="checkbox" name="unAssignedCheckBox" onchange="toggleUnAssignedCheckbox(this)" class="unAssignCheckbox" data-controlNo="'+ row.controlNo +'" data-customerNo="' + row.customerNo +'" data-cddStatus="' +row.cddStatus+'">';
+									       }
+									       return mData;
+									    },
+									    className: "dt-body-center" 
+									}, 
+								    { "mData": "customerNo"},
+							      	{ "mData": "customerName" },
+							      	{ "mData": "controlNo",
+							      		"render": function (controllNo) {
+							      			return "<a href=javascript: style='text-decoration:underline' onclick=openPage('cdd/init/"+controllNo+"')>"+controllNo+"</a>";
+						                }
+							      	},
+									{ "mData": "triggerType"},
+									{ "mData": "clientType" },
+									{ "mData": "lineOfBusiness" },
+									{ "mData": "cddStatus" },
+									{ "mData": "cddTriggeredDate"},
+									{ "mData": "cddRisk" } ,
+									{ "mData": "workItemType" },
+									{ "mData": "assignedTo" },
+									{ "mData": "assignedDate" },
+									{ "mData": "cddCurrentlyAssignedUser" }
+							]
+			});
+}
+//Assigned work Item
+function getDataTableForAssigned(url){
+	var assignedTotalRecords;
+	var pFlg;
+	  tableAssigned = $('#'+assignedTable).DataTable({
+		  "initComplete": function(settings, json) {
+		  	 $('#'+imgAssigned_rotation).hide();
+			 $('#'+imgAssigned).show();
+			   if(tableAssigned.data().count() < PageCountFrmTableForInbox){ 
+		    		document.getElementById(idNext).style.visibility="hidden";
+			  	}else{ 
+			  		if(assignedTotalRecords == tableAssigned.data().count()){
+			  			document.getElementById(idNext).style.visibility="hidden";
+			  			document.getElementById(idPrevious).style.visibility="hidden";
+			  		}else{
+		  				pFlg = handleLastPageInDatatable(assignedTotalRecords,PageCountFrmTableForInbox,assignedPageNo);
+		  				if(!pFlg){
+			  				document.getElementById(idNext).style.visibility="hidden";
+			  			}else{
+			  				document.getElementById(idNext).style.visibility="visible";
+			  				$('#'+idNext).show();
+			  			}
+			  		}
+		    	}
+			 },
+		    destroy: true,
+		  	"ajax": {
+	             "url": url,
+	             "dataSrc": function(data) {
+	            	 console.log(data);
+	            	 //if(assignedPageNo == 1) {
+	            		 assignedTotalRecords = data.totalCount;
+	            		 $("#"+idAssignedTotal).html(data.totalCount);
+	            	 //}
+	            	 return data.inboxEntity;
+	             }
+	         },
+		  	 "bFilter"	  	: true,
+		  	 pageLength 	: 15,
+			 "scrollY"		: "112px",
+			 stripeClasses: [ 'odd-row', 'even-row' ],
+			 "sAjaxDataProp": "",
+			 "order"		: [[8, "desc" ]],
+			 columnDefs: [{ "width": "2%", "targets": 0 },{"className": "dt-left", "targets": [5]},{"className": "dt-left", "targets": [6]},{"className": "dt-left", "targets": [9]},{"className": "dt-center", "targets": [8]},{"targets": [13],"visible": false}],
+			 "aoColumns" 	: [
+									 {
+										mData:   "selectBox",
+									     render: function ( mData, type, row ) {
+									       if ( type === 'display' ) {
+									    	   return '<input type="checkbox" class="assignCheckbox" name="assignedCheckBox" onchange="toggleAssignedCheckbox(this)" data-controlNo="'+ row.controlNo +'" data-customerNo="' + row.customerNo +'" data-cddStatus="'+row.cddStatus+'" data-cddCurrentlyAssignedUser="'+row.cddCurrentlyAssignedUser+ '">';
+									        }
+									        return mData;
+									    },
+									    className: "dt-body-center" 
+									}, 
+								    { "mData": "customerNo"},
+							      	{ "mData": "customerName" },
+							      	{ "mData": "controlNo",
+							      		"render": function (controllNo) {
+						                    return "<a href=javascript: style='text-decoration:underline' onclick=openPage('cdd/init/"+controllNo+"')>"+controllNo+"</a>";
+						                }
+							      	},
+									{ "mData": "triggerType" },
+									{ "mData": "clientType" },
+									{ "mData": "lineOfBusiness" },
+									{ "mData": "cddStatus" },
+									{ "mData": "cddTriggeredDate"},
+									{ "mData": "cddRisk" } ,
+									{ "mData": "workItemType" },
+									{ "mData": "assignedTo" },
+									{ "mData": "assignedDate" },
+									{ "mData": "cddCurrentlyAssignedUser" }
+							]
+			});
+}
+
+function getParameterDetails(url){
+	$.ajax({
+		type : "post",
+		url : url,
+		cache : false,
+		data : "",
+		dataType: "json",
+		success : AjaxGetSearchDataSucceeded,
+		error : function() {
+			closePopupLoader();
+        	console.log("Error occured");
+		}
+	});
+}
+function showProfile(paramId, paramName, paramType, createdBy){	
+	if(contextCreatedBy == createdBy){
+		alert("Maker and checker user can not be same.");
+	}else{
+	if('COUNTRY_OVERRIDE' === (paramType)){
+		openPage(contextPath + "/countryRiskOverride/checker?paramId="+paramId+"&paramName="+paramName);
+	}else if('TRIGGER_REFRESH' === (paramType)){
+		openPage(contextPath + "/triggerrefreshrulesconfig/initChecker?paramId="+paramId+"&paramName="+paramName);
+	}
+	else if('WORKFLOW_CONFIG' === (paramType)) {		
+		openPage(contextPath + "/singletouch/checkerSingleTouch?configId="+paramId+"&configName="+paramName);
+	}
+	else if('CDD_ATTRIBUTES_SCORES' == paramType){
+		openPage(contextPath + "/cddRiskAttributeConfig/singleTaskView?picklistId="+paramId+"&paramName="+paramName);
+	}
+}
+}
+function AjaxGetSearchDataSucceeded(result) {
+    if (result != "[]") {
+    $('#'+param_table_result).DataTable( {
+    	"initComplete": function(settings, json) {
+    		 $('#'+imgParamConfig_rotation).hide();
+			 $('#'+imgParamConfig).show();
+			 loadPaginationParamInbox($("#pageNo").val(), $("#totalCount").val(), "getParameterPagination");
+			closePopupLoader();
+		 },
+		 destroy: true,
+		 stripeClasses: [ 'odd-row', 'even-row' ],
+		 columnDefs: [{ "targets": [0], "width": "2%" },{ "targets": [1], "width": "9%" },{ "targets": [2], "width": "16%" },{ "targets": [3,4,5,6,7], "width": "13%" }, {"targets": [8],"visible": false}],
+		 
+ 	   	"bFilter": false,
+ 	   	"bInfo": false,
+ 	    "bPaginate": false,
+ 	    "aaData": result,
+ 	    "bDataSrc":"",
+ 	        "aoColumns": [
+ 	            {
+					mData:   "selectBox",
+					render: function ( mData, type, row ) {
+						if ( type === 'display' ) {
+							return '<input type="checkbox" name="paramAssignedCheckBox" onchange="toggleParameterAssignedCheckbox(this)" class="paramAssignCheckbox" data-parameterId="'+ row.parameterId +'" data-parameterType="' + row.parameterType +'" data-assignUserId="' +row.userId+'"  data-createdbyUser="' +row.maker+'">';
+						}
+							       return mData;
+					},
+					className: "dt-body-center" 
+				},           
+ 	                      
+ 	                      
+ 	            { "mDataProp": "parameterId",
+ 	              "render": function (mData, type, row) {
+ 	            	  	return "<a href=javascript: style='text-decoration:underline' onclick=showProfile('"+row.parameterId+"','"+row.parameterName+"','"+row.parameterType+"','"+row.maker+"')>"+row.parameterId+"</a>";
+	                }
+ 	            },
+ 	            { "mDataProp": "paramDesc" },
+ 	            { "mDataProp": "parameterType" },
+ 	            { "mDataProp": "status" },
+ 	            { "mDataProp": "createdBy" },
+ 	            { "mDataProp": "createdDt" },
+ 	            { "mDataProp": "assigneeTO" },
+ 	            { "mDataProp": "maker" }
+ 	        
+ 	        ]
+ 	    });
+
+    }
+}
+
+function getParameterPagination(pageNmbr){
+	pageNo = pageNmbr;
+	$("#pageNo").val(pageNo);
+	url = urlParam =contextPath+"/inbox/getParameter"+"?pageNo="+pageNmbr+"&tabValue="+tabValue+"&paramType="+paramType+"&paramId="+paramId;
+	getParameterDetails(url);
+}
+function getTotalCustomersCount() {
+	pageNo = $("#pageNo").val();
+	
+	paramType = $("#paramType").val();
+	$.ajax({
+		type:"GET",
+		//async : false,
+	    url: contextPath + "/inbox/getParameterCount"+"?pageNo="+pageNo+"&tabValue="+tabValue+"&paramType="+paramType+"&paramId="+paramId,
+	    dataType: "json",
+	    success: function(response) {
+	    	$("#totalCount").val(response);
+	    	$("#"+param_total_count).text(response);
+	    }
+	});
+}
+function clearParamId(){
+	pageNo = 1;
+	$("#pageNo").val(pageNo);
+	var paramId= $("#paramId").val();
+	paramType = $("#paramType").val();
+	var paramIdLength= $("#paramId").val().length;
+	if(paramIdLength < 1){
+		getTotalCustomersCount();
+		url=contextPath + "/inbox/getParameter"+"?pageNo="+pageNo+"&tabValue="+tabValue+"&paramType="+paramType+"&paramId="+paramId;
+		getParameterDetails(url)
+	   	//hideUnAssignedWrkItm();
+		//$('#'+idNext_UnAssigned).show();
+	}
+}
+$('#btnParamIdSearch').click(function(){
+	pageNo = 1;
+	$("#pageNo").val(pageNo);
+	paramType = $("#paramType").val();
+	var paramId= $("#paramId").val();
+	getSearchTotalCustomersCount(paramId);
+	url=contextPath + "/inbox/getParameter"+"?pageNo="+pageNo+"&tabValue="+tabValue+"&paramType="+paramType+"&paramId="+paramId;
+	getParameterDetails(url)
+   /*	hideAssignedWrkItm();
+   	document.getElementById(idAssignedPageNumber).innerHTML=1;
+   	$('#'+idPrevious).hide();
+   	$('#'+idNext).hide();*/
+});
+
+function getSearchTotalCustomersCount(paramIdNo) {
+	pageNo = $("#pageNo").val();
+	
+	paramType = $("#paramType").val();
+	$.ajax({
+		type:"GET",
+		//async : false,
+	    url: contextPath + "/inbox/getParameterCount"+"?pageNo="+pageNo+"&tabValue="+tabValue+"&paramType="+paramType+"&paramId="+paramIdNo,
+	    dataType: "json",
+	    success: function(response) {
+	    	$("#totalCount").val(response);
+	    	$("#"+param_total_count).text(response);
+	    }
+	});
+}
+
+function validateCreatedBy(){
+	setTimeout(function () {
+	$.ajax({
+		type : "post",
+		url : contextPath +"/countryRiskOverride/getContextUserName",
+		cache : false,
+		data : "",
+		 async : false,
+		 timeout: 600000,
+		success : function(response){
+			contextCreatedBy = response;
+		},
+		error : function(response) {
+			closePopupLoader();
+        	console.log("Error occured");
+		}
+	});
+	},10);
+}
+
+
+function loadPaginationParamInbox(pageNo, totalCount, jsFunction) {
+	showPopupLoader();
+	$.ajax({
+		contentType : "application/json; charset=utf-8",
+		url : "/amlcdd/loadPagination?pageNo="+pageNo+"&totalCount="+totalCount+"&jsFunction="+jsFunction,
+		success : function(data) {
+			$('#'+param_pagination).html(data);
+		},
+		error: function(error) {
+			console.log(error);
+		}
+	});
+}
+
