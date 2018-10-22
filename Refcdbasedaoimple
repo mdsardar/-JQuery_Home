@@ -1,0 +1,234 @@
+@Repository
+public class CDDBaseDaoImpl<E> implements CDDBaseDao<E> {
+	
+	private final Logger LOGGER = LoggerFactory.getLogger(CDDBaseDaoImpl.class);
+	
+	@Autowired
+	private Environment environment;
+	
+	@Autowired
+	private ConfigurableBeanFactory beanFactory;
+
+	private static final Map<String,Session> sessions = new HashMap<String,Session>(); 
+
+	/**
+	 * Method returns current session for the logged in user country
+	 */
+	protected Session getSession() {
+		String appEnv = environment.getProperty(AMLCDDConstants.APP_ENV);
+		if(AMLCDDConstants.JUNIT.equalsIgnoreCase(appEnv)){
+			return getCurrentSessionFactory();
+		} else {
+		LOGGER.info("CDDBaseDaoImpl :getSession "+getUserCountry() +"  session "+getSessions().get(getUserCountry()));	
+		Session session = getSessions().get(getUserCountry()).getSessionFactory().getCurrentSession();
+		session.setFlushMode(FlushMode.MANUAL);
+		return session;
+		}
+	}
+	
+	/**
+	 * Method returns current session for the country provided in the parameter.
+	 * 
+	 * @param countryCode Session required for the country.
+	 */
+	protected Session getSession(String countryCode) {
+		String appEnv = environment.getProperty(AMLCDDConstants.APP_ENV);
+		if(AMLCDDConstants.JUNIT.equalsIgnoreCase(appEnv)){
+			return getCurrentSessionFactory();
+		} else {
+		Session session = getSessions().get(countryCode).getSessionFactory().getCurrentSession();
+		session.setFlushMode(FlushMode.MANUAL);
+		return session;
+		}
+	}
+	
+	/**
+	 * Method returns open session for the country provided in the parameter.
+	 * 
+	 */
+	protected Session getOpenSession() {
+		String appEnv = environment.getProperty(AMLCDDConstants.APP_ENV);
+		if(AMLCDDConstants.JUNIT.equalsIgnoreCase(appEnv)){
+			return getOpenSessionFactory();
+		} else {
+		Session session = getSessions().get(getUserCountry()).getSessionFactory().openSession();
+		session.setFlushMode(FlushMode.MANUAL);
+		return session;
+		}
+	}
+	
+	/**
+	 * Method returns open session for the country provided in the parameter.
+	 * 
+	 * @param countryCode Session required for the country.
+	 */
+	protected Session getOpenSession(String countryCode) {
+		String appEnv = environment.getProperty(AMLCDDConstants.APP_ENV);
+		if(AMLCDDConstants.JUNIT.equalsIgnoreCase(appEnv)){
+			return getOpenSessionFactory();
+		} else {
+		Session session = getSessions().get(countryCode).getSessionFactory().openSession();
+		session.setFlushMode(FlushMode.MANUAL);
+		return session;
+		}
+	}
+	
+	/**
+	 * Method to get loads the session with respective to the configured country codes in the environment properties.
+	 */
+	@Override
+	public void loadSessions(){
+		LOGGER.info("Inside load Sessions");
+		String appEnv = environment.getProperty(AMLCDDConstants.APP_ENV);
+		if(!AMLCDDConstants.JUNIT.equalsIgnoreCase(appEnv)){
+		String countriesToLoad = environment.getProperty(AMLCDDConstants.COUNTRIES_TO_LOAD);
+		String defaultPU = environment.getProperty(AMLCDDConstants.DEFAULT_PU);
+		List<String> countriesList = Arrays.asList(countriesToLoad.split(AMLCDDConstants.COMMA_SPLITER));
+		for (String country : countriesList) {
+			String persistenceUnitName = defaultPU+country;
+			Session Session = getSessionFactoryforCountry(persistenceUnitName);
+			sessions.put(country, Session);
+			LOGGER.info("Session Loaded for : "+country);
+			}
+		}
+	}
+	
+	/**
+	 * Method to helps to prepare Session from the entity manager factory -> Persistance class.
+	 */
+	private Session getSessionFactoryforCountry(String persistanceUnitName) {
+		LOGGER.info("Preparing Session for : "+persistanceUnitName);
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory(persistanceUnitName);
+		LOGGER.info("Session prepared for : "+persistanceUnitName);
+		return emf.createEntityManager().unwrap(Session.class);
+	}
+	
+	private Map<String, Session> getSessions() {
+		return sessions;
+	}
+
+	public Object findDataById(E e, String id) {
+		return getSession().get(e.getClass(), id);
+	}
+
+	public <T> Object getDataById(Class<T> clazz, String id) {
+		return getSession().get(clazz, id);
+	}
+
+	@Override
+	public void saveObject(Object objCollection) {
+		getSession().save(objCollection);
+		flush();
+	}
+
+	@Override
+	public void updateObject(Object obj) {
+		getSession().update(obj);
+		flush();
+	}
+	
+	@Override
+	public void mergeObject(Object obj) {
+		getSession().merge(obj);
+		flush();
+	}
+
+	@Override
+	public void saveOrUpdateObject(Object obj) {
+		getSession().saveOrUpdate(obj);
+		flush();
+	}
+
+	@Override
+	public void saveOrUpdateAll(Collection objCollection) {
+		getSession().saveOrUpdate(objCollection);
+		flush();
+	}
+
+	public void deleteAll(Collection objCollection) {
+		getSession().delete(objCollection);
+		flush();
+	}
+
+	public void deleteObject(Object obj) {
+		getSession().delete(obj);
+		flush();
+	}
+	
+	/**
+	 * This Method is used to delete the records from Database.
+	 * @param obj
+	 * @param id
+	 */
+	public void deleteObjectById(Object obj,String id) {
+		Object objToDelete = getSession().get(obj.getClass(),id);
+		if(null != objToDelete){
+			getSession().delete(objToDelete);
+			flush();
+		}
+	}
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * com.citigroup.amlcdd.framework.dao.CDDBaseDao#deleteObjects(java.util.
+	 * Collection)
+	 */
+	@Override
+	public void deleteObjects(Collection objCollection) throws Exception {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void flush() {
+		getSession().flush();
+	}
+
+	/**
+	 * Method to get the sequence number using the Function: FN_CDD_SEQUENCE_GEN
+	 * 
+	 * @param sequenceName
+	 *            Input sequenceName should be passed with out the prefix: SEQ_
+	 *            Eg: for the sequence: SEQ_ATCH, input should be: ATCH
+	 */
+	@Override
+	public String getSequenceNo(String sequenceName) {
+		String seqNo = "";
+		String strQuery = "select FN_CDD_SEQUENCE_GEN(:SEQ_NAME) from dual";
+		Query qry = getSession().createSQLQuery(strQuery);
+		qry.setParameter("SEQ_NAME", sequenceName);
+		List<Object> lstObjects = qry.list();
+		for (Object obj : lstObjects) {
+			if (obj != null) {
+				seqNo = String.valueOf(obj);
+			}
+		}
+		return seqNo;
+	}
+
+	/**
+	 * Method to get User Context Country from session and it'll return all user
+	 * details
+	 */
+	public String getUserCountry() {
+		if (SecurityContextHolder.getContext().getAuthentication() == null) {
+			return environment.getProperty(AMLCDDConstants.DEFAULT_COUNTRY);
+		}else{
+		UserContext uc = (UserContext) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+			return uc.getKycCountryCode();
+		}
+	}
+	
+	private Session getCurrentSessionFactory() {
+		SessionFactory sf = (SessionFactory) beanFactory.getBean(AMLCDDConstants.SESSION_FACTORY);
+		return sf.getCurrentSession();
+	}
+	
+	private Session getOpenSessionFactory() {
+		SessionFactory sf = (SessionFactory) beanFactory.getBean(AMLCDDConstants.SESSION_FACTORY);
+		return sf.openSession();
+	}
+
+	
+}
